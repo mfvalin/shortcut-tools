@@ -1,0 +1,7 @@
+Package: shortcut-tools
+Version: 1.0
+Platform: all
+Maintainer: armnmfv
+BuildInfo:
+Description: ssm and module shortcut tools
+
