@@ -12,7 +12,7 @@ cd $TMPDIR/bin || exit 1
 #define MAX_ENTRIES 200
 
 usage(char *str) {
-  fprintf(stderr,"Usage: %s [-so] path_to_scan [path_to_link_into]\n",str);
+  fprintf(stderr,"Usage: %s [--lib] [maxdirsize] path_to_scan [path_to_link_into]\n",str);
   exit(1);
 }
 
@@ -27,22 +27,41 @@ int status;
 char *so_string=".so";
 int look_for_so=0;
 char *my_name = argv[0];
+int max_entries;
 
-if(strcmp("-so",argv[1]) == 0) {
+if(argc<2)  usage(my_name);  /* not enough arguments */
+if(strcmp("--help",argv[1]) == 0 || strcmp("-h",argv[1]) == 0 ) {
+  usage(my_name);
+}
+
+if(argc<2)  usage(my_name);  /* not enough arguments */
+if(strcmp("--lib",argv[1]) == 0) {  /* library path mode, look for .so */
   argc--;
   argv++;
   look_for_so=1;
 }
 
+max_entries = atoi(argv[1]);
+if(max_entries > 0) {   /* maximum allowable entries in directory in order to cache */
+  argc--;
+  argv++;
+}else{
+  max_entries = MAX_ENTRIES;
+}
+
 if(argc<2)  usage(my_name);
 
 /* fprintf(stderr,"Scanning %s\n",argv[1]);   */
-dirp = opendir(argv[1]); /* There should be error handling after this */
+dirp = opendir(argv[1]);
+if(dirp == NULL) { /* error while trying to open directory */
+  /* fprintf(stderr,"ERROR opening %s\n",argv[1]); */
+  exit(3);
+}
 
 while ((entry = readdir(dirp)) != NULL) {
   entries++;
-  if(entries > MAX_ENTRIES){
-  /*  fprintf(stderr,"more than %d entries found in %s, EXITING\n",MAX_ENTRIES,argv[1]);   */
+  if(entries > max_entries){
+  /*  fprintf(stderr,"more than %d entries found in %s, EXITING\n",max_entries,argv[1]);   */
     closedir(dirp);
     exit(2);  /* too many entries */
   }
@@ -52,11 +71,12 @@ if(argc == 2) {  /* we are only checking the number of entries */
   closedir(dirp);
   exit(0);
 }
-if(argc!=3) usage(my_name);
+if(argc!=3) usage(my_name);  /* too many arguments */
 
 rewinddir(dirp);
 while ((entry = readdir(dirp)) != NULL) {
-
+    if(strcmp("." ,entry->d_name) == 0) continue;
+    if(strcmp("..",entry->d_name) == 0) continue;
 #ifdef __linux
     if (entry->d_type == DT_DIR) { /* If the entry is a directory (linux only feature) */
       continue;
@@ -74,7 +94,8 @@ while ((entry = readdir(dirp)) != NULL) {
 }
 /*fprintf(stderr,"Linked %d files from %s into %s\n",file_count,argv[1],argv[2]);   */
 closedir(dirp);
+exit(0);
 }
 EOT
-cc link_files_in_dir.c -o link_files_in_dir
+make link_files_in_dir
 rm -f link_files_in_dir.c

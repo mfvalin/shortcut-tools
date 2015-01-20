@@ -1,0 +1,6 @@
+#!/bin/bash
+[[ "${1}" == "-x" || "${1}" == "--export" ]] && ExPoRt="export " && shift
+for Target in $*
+do
+  which ${Target} 2>/dev/null 1>/dev/null && echo "${ExPoRt}CMD_${Target}=$(which ${Target})"
+done

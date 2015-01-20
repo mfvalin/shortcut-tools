@@ -1,45 +1,74 @@
 #!/bin/bash
-[[ -f $TMPDIR/.path_cache ]] && . $TMPDIR/.path_cache
-#echo $PATH >$TMPDIR/.path_cache
+if [[ "$1" == --help || "$1" == -h ]] ; then
+  echo "USAGE: ${0##*/} [-h|--help] [-v] [--lib] [--cleanup|--restore] \$PATH|\$LD_LIBRARY_PATH|\$LIBPATH (arguments are order dependent)" 1>&2
+  exit 0
+fi
+[[ -x ${TMPDIR}/bin/link_files_in_dir ]] || exit 1
+Verbose=""
+[[ "$1" == "-v" ]] && Verbose="yes" && shift 1>&2
 
-rm -rf $TMPDIR/.path_cache_1*   # cleanup before processing
-echo "INFO: removing fast path directories $TMPDIR/.path_cache_1*"  1>&2
+LibMode=""
+[[ "$1" == "--lib" ]] && LibMode="--lib" && shift   # LD_LIBRARY_PATH/LIBPATH rather than PATH
 
-[[ "$1" == restore ]] && echo "PATH=${OldPathValue:-${PATH}}" && exit 0
+rm -rf $TMPDIR/.path_cache${LibMode}_1*   # cleanup before processing
+[[ -n ${Verbose} ]] && echo "INFO: removing fast path directories $TMPDIR/.path_cache${LibMode}_1*"  1>&2
+[[ "$1" == "--cleanup" ]] && exit 0
+
+[[ -f $TMPDIR/.path_cache${LibMode} ]] && . $TMPDIR/.path_cache${LibMode}
+
+[[ "$1" == "--restore" ]] && echo "PATH=${OldPathValue:-${PATH}}" && exit 0
 #
+Number=""
+if [[ "$1" == [1-9]* ]] ; then
+  Number=$1
+  shift
+fi
 NewDir=1
 BaseDir=100
-NewPath=$TMPDIR/bin
+NewPath=""
+[[ -z ${LibMode} ]] && NewPath="${TMPDIR}/bin"
 #
-for Target in $(echo $PATH | tr ':' '\n') 
+for Target in $(echo $* | tr ':' '\n') 
 do
-  [[ ${Target} == ${TMPDIR}/bin ]] && continue
+  [[ ${Target} == ${TMPDIR}/bin ]] && continue   # red herring in library mode
 #
-  ./link_files_in_dir ${Target}  ; status=$?  # status=2 means too many entries to be worth linking
+  ${TMPDIR}/bin/link_files_in_dir ${LibMode} ${Number} ${Target}  ; status=$?  # status=2 means too many entries to be worth linking
+  ((status==3)) && continue                 # cannot open directory, ignore it
+
+  if [[ ${Target} != /* ]] ; then           # non absolute path, keep as is
+    [[ -d ${Target} ]] && NewPath="${NewPath}:${Target}"
+    continue
+  fi
 #
+  [[ -n ${Verbose} ]] && echo "${status} ${Target}"   1>&2
   case ${status} in
-    0) # reasonable number of entries in directory,  we will use soft links
+    0) # reasonable number of entries in directory, use soft links
        ((NewDir==1)) && \
-       mkdir -p $TMPDIR/.path_cache_${BaseDir} && \
-       NewPath="${NewPath}:$TMPDIR/.path_cache_${BaseDir}"
-       ./link_files_in_dir ${Target} $TMPDIR/.path_cache_${BaseDir}
-       printf ":%s" ${Target} >> $TMPDIR/.path_cache_${BaseDir}.src
+       mkdir -p $TMPDIR/.path_cache${LibMode}_${BaseDir} && \
+       NewPath="${NewPath}:$TMPDIR/.path_cache${LibMode}_${BaseDir}"
+       ${TMPDIR}/bin/link_files_in_dir ${LibMode} ${Number} ${Target} $TMPDIR/.path_cache${LibMode}_${BaseDir}
+       ((NewDir==0)) && printf ":%s" ${Target} >> $TMPDIR/.path_cache${LibMode}_${BaseDir}.src
+       ((NewDir==1)) && printf "%s" ${Target} >> $TMPDIR/.path_cache${LibMode}_${BaseDir}.src
        ((NewDir=0))
        ;;
-    2) # too many entries in directory, we will link to the directory instead
+    2) # too many entries in directory, link to the directory instead
        ((NewDir==0)) && ((BaseDir=BaseDir+1))
-       ln -s ${Target} $TMPDIR/.path_cache_${BaseDir}
-       NewPath="${NewPath}:$TMPDIR/.path_cache_${BaseDir}"
-       printf "%s" ${Target} >> $TMPDIR/.path_cache_${BaseDir}.src
        ((NewDir=1))
-       ((BaseDir=BaseDir+1))
+       NewPath="${NewPath}:${Target}"
+#       ln -s ${Target} $TMPDIR/.path_cache_${BaseDir}
+#       NewPath="${NewPath}:$TMPDIR/.path_cache_${BaseDir}"
+#       printf "%s" ${Target} >> $TMPDIR/.path_cache_${BaseDir}.src
+#       ((BaseDir=BaseDir+1))
        ;;
-    *) exit ${status}     # serious error while trying to link
+    *) # other error while trying to link
+       echo Status = ${status} 1>&2
+       exit ${status}
        ;;
   esac
 done
-echo "INFO: NEW PATH will be"   1>&2
-echo "${NewPath}" | tr ':' '\n' 1>&2
-echo "OldPathValue=${PATH}"    >$TMPDIR/.path_cache
-echo "NewPathValue=${NewPath}" >>$TMPDIR/.path_cache
-echo "PATH=${NewPath}"
+NewPath="${NewPath#:}"
+[[ -n ${Verbose} ]] && echo "INFO: optimized path will be"   1>&2
+[[ -n ${Verbose} ]] && echo "${NewPath}" | tr ':' '\n' 1>&2
+echo "OldPathValue=${PATH}"    >$TMPDIR/.path_cache${LibMode}
+echo "NewPathValue=${NewPath}" >>$TMPDIR/.path_cache${LibMode}
+echo "${NewPath}"
