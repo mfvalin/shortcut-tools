@@ -4,7 +4,10 @@ if [[ "$1" == --help || "$1" == -h ]] ; then
   echo "       version = 1.0.0 2015/01/20"  1>&2
   exit 0
 fi
-[[ -x ${TMPDIR}/bin/link_files_in_dir ]] || exit 1
+Where=$(true_path ${0})
+Where=${Where%/*}
+[[ -x ${TMPDIR}/bin/link_files_in_dir ]] || ${Where%/*}/bin/make_link_files_in_dir
+[[ -x ${TMPDIR}/bin/link_files_in_dir ]] || exit 1  # cannot make the needed program
 Verbose=""
 [[ "$1" == "-v" ]] && Verbose="yes" && shift 1>&2
 
@@ -13,7 +16,7 @@ LibMode=""
 
 rm -rf $TMPDIR/.path_cache${LibMode}_1*   # cleanup before processing
 [[ -n ${Verbose} ]] && echo "INFO: removing fast path directories $TMPDIR/.path_cache${LibMode}_1*"  1>&2
-[[ "$1" == "--cleanup" ]] && exit 0
+[[ "$1" == "--cleanup" ]] && rm -f $TMPDIR/.path_cache${LibMode}* && exit 0
 
 [[ -f $TMPDIR/.path_cache${LibMode} ]] && . $TMPDIR/.path_cache${LibMode}
 
