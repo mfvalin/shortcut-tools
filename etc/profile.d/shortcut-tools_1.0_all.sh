@@ -41,3 +41,4 @@ alias shortcut='. r.shortcut.dot'
 complete -F _shortcut_compfn shortcut
 #
 make_link_files_in_dir
+make_fix_the_paths
