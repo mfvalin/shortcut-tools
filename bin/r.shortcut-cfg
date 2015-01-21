@@ -3,6 +3,12 @@ Where=$(true_path ${0})
 Where=${Where%/bin/*}
 [[ -z $1 ]] && echo ${Where} && exit 0
 [[ $1 == --short* ]] && echo ${Where}/shortcuts && exit 0
-# NOTE: ${SSM_SHORTCUT_PATH} and $(r.unified_setup-cfg -local || echo $ARMNLIB)/data/ssm_domains are legacy items
-[[ $1 == --paths ]] && echo "${HOME}/my_ssm_domains ${EC_SHORTCUT_PATH} ${SSM_SHORTCUT_PATH} ${Where}/shortcuts $(r.unified_setup-cfg -local || echo $ARMNLIB)/data/ssm_domains $MODULEPATH" | tr ':' ' ' && exit 0
+# NOTE: ${HOME}/my_ssm_domains ${SSM_SHORTCUT_PATH} and $(r.unified_setup-cfg -local || echo $ARMNLIB)/data/ssm_domains are legacy items
+if [[ $1 == --paths ]] ; then
+  for Target in  $(echo "${HOME}/my_shortcuts ${HOME}/my_ssm_domains ${EC_SHORTCUT_PATH} ${SSM_SHORTCUT_PATH} ${Where}/shortcuts $(r.unified_setup-cfg -local || echo $ARMNLIB)/data/ssm_domains $MODULEPATH" | tr ':' ' ' ) ; do
+    [[ -d "${Target}" ]] && printf "%s " "${Target}"
+  done
+  printf "\n"
+  exit 0
+fi
 echo ${Where} && exit 0

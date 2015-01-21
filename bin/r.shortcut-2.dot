@@ -56,26 +56,26 @@ echo shortcut${ENV_TEST_MODE}.dot "$@"
 [[ -n ${ENV_TEST_MODE} ]] && echo "WARNING: using r.resolve_shortcuts${ENV_TEST_MODE}"
 
 # get error messages and print them
-Targets="$(s.resolve_ssm_shortcuts${ENV_TEST_MODE} $*  2>$TMPDIR/resolve_messages_$$)"
+#Targets="$(s.resolve_ssm_shortcuts${ENV_TEST_MODE} $*  2>$TMPDIR/resolve_messages_$$)"
+Targets="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$)"
 cat $TMPDIR/resolve_messages_$$
 rm -f $TMPDIR/resolve_messages_$$
 
 #for Target in $(r.resolve_shortcuts${ENV_TEST_MODE} "$@" )
+ModuleMode=Add
 for Target in ${Targets}
 do
   export SSM_SHORTCUT="$Target"
 
-#  [[ "$Target" = Append ]] && OrDeR='append' && echo "switching to 'APPEND' mode" && continue
-#  [[ "$Target" = Prepend ]] && OrDeR='prepend' && echo "switching to 'PREPEND' mode" && continue
-  [[ "$Target" = Prepend || "$Target" = Append ]] && continue
+  [[ "$Target" = Prepend || "$Target" = Append ]] && continue # deprecated items, accepted for backward compatibility
 
 # resolver detected error
   if [[ "$Target" == @* ]] ; then echo ERROR: NO SHORTCUT FOUND FOR ${Target#@} ; continue ; fi
 
-# resolver marker for start/end of bundle, used to set/unset SSM_BUNDLE_PATH
-  if [[ "$Target" == ++* ]] ; then export SSM_BUNDLE_PATH="${Target#++@}" ; continue ; fi
+# resolver marker for start/end of bundle, used to set/unset SHORTCUT_BUNDLE_PATH
+  if [[ "$Target" == ++* ]] ; then export SHORTCUT_BUNDLE_PATH="${Target#++@}" ; continue ; fi
 
-  [[ -n "${SSM_BUNDLE_PATH}" ]] && echo BUNDLE PATH=${SSM_BUNDLE_PATH}
+  [[ -n "${SHORTCUT_BUNDLE_PATH}" ]] && echo SHORTCUT BUNDLE PATH=${SHORTCUT_BUNDLE_PATH}
 
 # package@domain, use true_path fully qualified package (name_version_platform)
   if [[ -d "${Target#*@}/etc/ssm.d" && -d "${Target#*@}/${Target%@*}" ]] ; then
@@ -113,7 +113,8 @@ do
     if [[ ${StAtUs} == "111" ]] ; then echo "ABORT Requested while processing shortcut ${Target}" ; break ; fi
     continue ;
   fi
-
+# if we get to this point it must be a module
+  . module.dot add ${Target} && continue
 # OOPS, nothing matches
   echo ERROR: NO SHORTCUT FOUND FOR ${Target}
 done
@@ -122,5 +123,5 @@ unset SSM_SHORTCUT || true
 . r.path_cleanup.dot
 
 unset -f ssmuse_domain ssmunuse_domain ssmuse || true
-unset fonc DoMaIn Target SSM_BUNDLE_PATH SSM_SHORTCUT || true
+unset fonc DoMaIn Target SHORTCUT_BUNDLE_PATH SSM_SHORTCUT || true
 return ${StAtUs}

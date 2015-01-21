@@ -19,7 +19,7 @@ _echo_dir()
 #
 _shortcut_possibilities()
 {
-for j in $( echo ${SSM_SHORTCUT_PATH} ${HOME}/my_ssm_domains  $(r.unified_setup-cfg -local || echo $ARMNLIB)/data/ssm_domains $MODULEPATH | tr ':' ' ' )
+for j in $(  r.shortcut-cfg --paths )
 do
   if [[ -d $j ]] ; then
     cd $j
@@ -40,5 +40,5 @@ echo overriding alias shortcut
 alias shortcut='. r.shortcut.dot'
 complete -F _shortcut_compfn shortcut
 #
-make_link_files_in_dir
+#make_link_files_in_dir
 make_fix_the_paths
