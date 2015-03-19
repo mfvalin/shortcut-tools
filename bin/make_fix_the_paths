@@ -10,6 +10,7 @@ cat <<"EOT" >r.fix_the_paths.c
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <dirent.h>
 
 
 static  char **eliminate=NULL;
@@ -17,7 +18,7 @@ static  int n_eliminate=0;
 
 print_usage(char *name)
 {
-   fprintf(stderr,"USAGE: %s [-v|--verbose] -pat1 -pat2 ... -patn [+supp1] item1 [+supp1] item2 ... [+suppn] itemn \n",name);
+   fprintf(stderr,"USAGE: %s [-v|--verbose] -pat1 -pat2 ... -patn [+supp1a[+supp1b[+supp1c]]] item1 [+supp2] item2 ... [+suppn] itemn \n",name);
    fprintf(stderr,"       pat1..patn simple patterns to eliminate\n");
    fprintf(stderr,"       supp1..suppn if item/supp is a directory, add it in front of item\n");
    fprintf(stderr,"       item = EnvName \n");
@@ -33,31 +34,31 @@ int is_duplicate(char *what, char **table, int nentries)  /* a non existent dire
   int i;
   struct stat stat_buf;
 
-  for(i=0;i<n_eliminate;i++) { if ( strstr(what,1+eliminate[i]) ) return 1; } /* if found in list to eliminate, treat as dulpicate */
-  if( 0 == stat(what,&stat_buf)) {           /* what exists */
-    if( S_ISDIR(stat_buf.st_mode) ) {        /* and is a directory */
-      while(nentries>0){                     /* let's now find if it is a duplicate */
-        if(table[nentries-1] != NULL) {
-          if(strcmp(what,table[nentries-1]) == 0) return 1;
-        }
-        nentries--;
-      }
-      return 0;
+  for(i=0;i<n_eliminate;i++) { if ( strstr(what,1+eliminate[i]) ) return 1; } /* if found in list to eliminate, treat as duplicate */
+  for(i=0;i<nentries;i++){
+    if(table[i] != NULL) {
+      if(strcmp(what,table[i]) == 0) return 1;
     }
   }
+  if ( 0 != stat(what,&stat_buf) ) return 1 ;  /* does not exist */
+  if( S_ISDIR(stat_buf.st_mode) )  return 0 ;  /* it is a directory */
   return 1;
 }
 
+#define MAXAUG 8
 main(int argc, char **argv)
 {
   char *progname;
   char *env_var;
   char *supplement;
+  char augment[1024];
+  char *augptr[MAXAUG];
+  int found[MAXAUG];
   char *sub_path[1204];
   char extra_path[1204];
   char env_value[32768];
   int nsubpath;
-  int i;
+  int i, j;
   char separator=':';
   char *temp;
   char *TMPDIR=getenv("TMPDIR");
@@ -68,6 +69,8 @@ main(int argc, char **argv)
   char *varname;
   struct stat stat_buf;
   int verbose=0;
+  DIR *dirfd;
+  struct dirent *my_dirent;
 
   progname=argv[0];
   if(argc < 2 ) { print_usage(argv[0]) ; exit(1); }
@@ -92,6 +95,13 @@ main(int argc, char **argv)
     varname=argv[0];
     if( *varname == '+' ) {
       supplement=varname+1;
+      strncpy(augment,supplement,sizeof(augment));
+      augment[sizeof(augment)-1] = '\0';
+      augptr[0] = &augment[0];
+      i = 0;
+      temp = &augment[0];
+      while( *temp != '\0' ) { if (*temp == '+' ) { *temp = '\0' ; augptr[++i] = temp+1 ;  }; temp++ ; if( i == MAXAUG-1 ) break ; } ;
+      while( i<MAXAUG ) augptr[++i] = NULL;
       argv++;
       continue;
     }
@@ -148,11 +158,31 @@ main(int argc, char **argv)
       for(i=0 ; i<nsubpath ; i++)                                /* output non override values */
         if(sub_path[i] != NULL) {
           if( *supplement != '\0' ) {
-            snprintf(extra_path,1023,"%s/%s",sub_path[i],supplement);
-            extra_path[1023]='\0';
-            if ( ! is_duplicate(extra_path,sub_path,nsubpath ) ) {
-              fprintf(stdout,"%s/%s%c",sub_path[i],supplement,separator);
+            for(j=0 ; j<MAXAUG ; j++) found[j] = 0;
+            if(  dirfd = opendir(sub_path[i]) ) {
+              while( (my_dirent = readdir(dirfd)) != NULL ) {
+                for(j=0 ; j<MAXAUG ; j++) {
+                  if(augptr[j] != NULL) {
+                    if( strcmp(my_dirent->d_name,augptr[j]) == 0 ){
+                      found[j] = 1;
+                    }
+                  }
+                }
+              }
+              closedir(dirfd);
             }
+            for(j=0 ; j<MAXAUG ; j++) {
+              if(augptr[j] != NULL) {
+                if(found[j]) fprintf(stdout,"%s/%s%c",sub_path[i],augptr[j],separator);
+              }
+            }
+/*
+//            snprintf(extra_path,1023,"%s/%s",sub_path[i],supplement);
+//            extra_path[1023]='\0';
+//            if ( ! is_duplicate(extra_path,sub_path,nsubpath ) ) {
+//              fprintf(stdout,"%s/%s%c",sub_path[i],supplement,separator);
+//            }
+*/
           }
           if( i == nsubpath-1 )
             fprintf(stdout,"%s'\n",sub_path[i]);
@@ -166,7 +196,7 @@ try_next:
     if(nsubpath == 0) {
       if(verbose) fprintf(stderr,"%s: ERROR no valid directory found in path variable %s\n",progname,*argv);
     }
-    supplement="";
+    supplement=""; augment[0] = '\0';
     argv++;
   }
 }
