@@ -29,6 +29,31 @@ print_usage(char *name)
    fprintf(stderr,"ex:    %s -/a/b/ -machin/patente PATH MANPATH EC_LD_LIBRARY_PATH\n",name);
 }
 
+int is_a_dir(char *extra_path)
+{
+  char buf[1204];
+  int i, found;
+  char *pname;
+  DIR *dirfd;
+  struct dirent *my_dirent;
+
+  strncpy(buf,extra_path,sizeof(buf));
+  buf[sizeof(buf)-1] = '\0';
+  for(i=strlen(buf)-1 ; i>0 && buf[i] != '/' ; i--) ;
+  pname = buf+i+1;
+  if(pname == buf+1) return 0;
+  found = 0;
+  buf[i] = '\0';
+  if(  dirfd = opendir(buf) ) {
+    while( (my_dirent = readdir(dirfd)) != NULL ) {
+      found = (0 == strcmp(my_dirent->d_name,pname) );
+      if(found) break;
+    }
+    closedir(dirfd);
+  }
+  return found;
+}
+
 int is_duplicate(char *what, char **table, int nentries)  /* a non existent directory is treated like a duplicate */
 {
   int i;
@@ -169,6 +194,7 @@ main(int argc, char **argv)
                         strncmp("/sbin",temp,5);
           if( *supplement != '\0' && augmentable ) {
             for(j=0 ; j<MAXAUG ; j++) found[j] = 0;
+#if defined(OLD_METHOD)
             if(  dirfd = opendir(sub_path[i]) ) {
               while( (my_dirent = readdir(dirfd)) != NULL ) {    /* scan parent directoty */
                 for(j=0 ; j<MAXAUG ; j++) {
@@ -184,6 +210,14 @@ main(int argc, char **argv)
               }
               closedir(dirfd);
             }
+#else
+            for(j=0 ; j<MAXAUG ; j++) {
+              if(augptr[j] != NULL) {
+                snprintf(extra_path,1023,"%s/%s",sub_path[i],augptr[j]);
+                found[j] = is_a_dir(extra_path);
+              }
+            }
+#endif
             for(j=0 ; j<MAXAUG ; j++) {
               if(augptr[j] != NULL) {
                 if(found[j]) { fprintf(stdout,"%s/%s%c",sub_path[i],augptr[j],separator); }
