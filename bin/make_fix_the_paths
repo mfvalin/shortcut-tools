@@ -29,27 +29,66 @@ print_usage(char *name)
    fprintf(stderr,"ex:    %s -/a/b/ -machin/patente PATH MANPATH EC_LD_LIBRARY_PATH\n",name);
 }
 
-int is_a_dir(char *extra_path)
+int is_dir_element(char *base, char *element)
 {
-  char buf[1204];
-  int i, found;
+  DIR *dirfd;
+  struct dirent *my_dirent;
+  struct stat stat_buf;
+  int found = 0;
+  char full_path[2048];
+
+  if(  dirfd = opendir(base) ){
+    snprintf(full_path,2047,"%s/%s",base,element);       /* build fullpath */
+    while( (my_dirent = readdir(dirfd)) != NULL ) {
+      if (0 == strcmp(my_dirent->d_name,element) ) {
+        if ( 0 == stat(full_path,&stat_buf) ) {          /* name match, stat it */
+          found = S_ISDIR(stat_buf.st_mode) ;            /* must be a directory */
+        }
+      }
+      if(found) break;
+    }
+    closedir(dirfd);
+  }
+  return found;
+}
+
+int is_a_dir(char *base_path, char *extra)   /* is this a directory ? */
+{
+  char extra_path[1024];
+  char full_base[2048];
+  int base_length;
+  char *subdirs[8];
+  int i, j, found;
   char *pname;
   DIR *dirfd;
   struct dirent *my_dirent;
 
-  strncpy(buf,extra_path,sizeof(buf));
-  buf[sizeof(buf)-1] = '\0';
-  for(i=strlen(buf)-1 ; i>0 && buf[i] != '/' ; i--) ;
-  pname = buf+i+1;
-  if(pname == buf+1) return 0;
-  found = 0;
-  buf[i] = '\0';
-  if(  dirfd = opendir(buf) ) {
-    while( (my_dirent = readdir(dirfd)) != NULL ) {
-      found = (0 == strcmp(my_dirent->d_name,pname) );
-      if(found) break;
+  if(*extra == '\0') return 0;
+
+  strncpy(extra_path,extra,1023);
+
+  for(i=0 ; i<8 ; i++) subdirs[i] = "";   /* break extra_path into constituent subdirectories */
+  pname = extra_path;
+  i = 0;
+  subdirs[i] = pname;
+  while(*pname != '\0') {
+    if(*pname == '/') {
+      *pname = '\0';
+      subdirs[++i] = pname + 1;
     }
-    closedir(dirfd);
+    pname++;
+  }
+
+  strncpy(full_base,base_path,2047);
+  base_length = strlen(full_base);
+  found = 0;
+  for (j=0 ; j<=i ; j++){       /* check one level at a time */
+    char *temp = subdirs[j];
+    if (*temp == '\0') break;
+    found = is_dir_element(full_base,temp);
+    if(found == 0) return found;
+    snprintf(full_base+base_length,2047-base_length,"/%s",temp);
+    base_length = strlen(full_base);
   }
   return found;
 }
@@ -108,7 +147,7 @@ main(int argc, char **argv)
     eliminate=argv;
     while(argc > 0 && **argv == '-') { n_eliminate++ ; argc-- ; argv++ ; }
   }
-/* for ( i=0 ; i<n_eliminate ; i++ ) { fprintf(stderr,"eliminating '%s'\n",1+eliminate[i]); } */
+
   tmpdir_bin[0]='\0';  /* tempdir/bin, top override */
   if(TMPDIR != NULL) snprintf(tmpdir_bin,1023,"%s/bin%c",TMPDIR,'\0'); tmpdir_bin[1023]='\0';
 
@@ -128,7 +167,14 @@ main(int argc, char **argv)
       augptr[0] = &augment[0];
       i = 0;
       temp = &augment[0];
-      while( *temp != '\0' ) { if (*temp == '+' ) { *temp = '\0' ; augptr[++i] = temp+1 ;  }; temp++ ; if( i == MAXAUG-1 ) break ; } ;
+      while( *temp != '\0' ) { 
+        if (*temp == '+' ) { 
+          *temp = '\0' ;
+          if(temp[1] != '+') augptr[++i] = temp+1 ;  /* ignore multiple consecutive + */
+        }
+        temp++ ;
+        if( i == MAXAUG-1 ) break ;
+      }
       while( i<MAXAUG ) augptr[++i] = NULL;
       argv++;
       continue;
@@ -197,13 +243,16 @@ main(int argc, char **argv)
             for(j=0 ; j<MAXAUG ; j++) {
               if(augptr[j] != NULL) {
                 snprintf(extra_path,1023,"%s/%s",sub_path[i],augptr[j]);
-                found[j] = is_a_dir(extra_path);
+                found[j] = is_a_dir(sub_path[i],augptr[j]);
               }
             }
             for(j=0 ; j<MAXAUG ; j++) {
               if(augptr[j] != NULL) {
+                char *tempo = augptr[j];
+                int ltempo = strlen(tempo)-1;
+                if(tempo[ltempo] == '/') tempo[ltempo] = '\0';   /* get rid of a trailing / */
                 if(found[j]) { fprintf(stdout,"%s/%s%c",sub_path[i],augptr[j],separator); }
-                else { if(verbose) fprintf(stderr,"'%s/%s' does not exist\n",sub_path[i],augptr[j]); }
+                else { if(verbose) fprintf(stderr,"directory '%s/%s' does not exist\n",sub_path[i],augptr[j]); }
               }
             }
           }else{   /* path is not augmentable or there is no augmentation request */
