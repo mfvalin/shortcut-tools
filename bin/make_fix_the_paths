@@ -71,6 +71,7 @@ main(int argc, char **argv)
   int verbose=0;
   DIR *dirfd;
   struct dirent *my_dirent;
+  int augmentable;
 
   progname=argv[0];
   if(argc < 2 ) { print_usage(argv[0]) ; exit(1); }
@@ -114,10 +115,12 @@ main(int argc, char **argv)
     if(env_var != NULL){        /* make sure it exists */
       strncpy(env_value,env_var,32767); env_value[32767]='\0';  /* take a copy */
       temp=env_value;
-      if(separator == '\0')
+      if(separator == '\0') {
         while(*temp != '\0' && *temp != ':' &&  *temp != ' ' && *temp != ';') temp++;  /* find separator, one of blank , colon, semicolon */
-      separator=*temp;
+        separator=*temp;
+      }
       temp=env_value;
+      if(separator == '\0') separator = ':' ;
       while( *temp == separator && *temp != '\0') temp++;       /* get rid of leading separators */
 
       nsubpath=1;
@@ -155,16 +158,24 @@ main(int argc, char **argv)
          }
       }
       while(sub_path[nsubpath-1] == NULL) nsubpath--;            /* suppress NULLs at tail of list */
-      for(i=0 ; i<nsubpath ; i++)                                /* output non override values */
+      for(i=0 ; i<nsubpath ; i++) {                              /* output non override values */
+        augmentable = 1;
         if(sub_path[i] != NULL) {
-          if( *supplement != '\0' ) {
+          temp = sub_path[i] ;
+          augmentable = strncmp("/usr/",temp,5) * strncmp("/opt",temp,4) * 
+                        strncmp("/bin",temp,4)  * strncmp("/etc",temp,4) *
+                        strncmp("/sbin",temp,5);
+          if( *supplement != '\0' && augmentable ) {
             for(j=0 ; j<MAXAUG ; j++) found[j] = 0;
             if(  dirfd = opendir(sub_path[i]) ) {
-              while( (my_dirent = readdir(dirfd)) != NULL ) {
+              while( (my_dirent = readdir(dirfd)) != NULL ) {    /* scan parent directoty */
                 for(j=0 ; j<MAXAUG ; j++) {
-                  if(augptr[j] != NULL) {
-                    if( strcmp(my_dirent->d_name,augptr[j]) == 0 ){
-                      found[j] = 1;
+                  if(augptr[j] != NULL) {                        /* augmenter is not null */
+                    if( strcmp(my_dirent->d_name,augptr[j]) == 0 ){               /* augmenter entry found */
+                      snprintf(extra_path,1023,"%s/%s",sub_path[i],augptr[j]);
+                      if ( 0 == stat(extra_path,&stat_buf) ) {
+                        found[j] = S_ISDIR(stat_buf.st_mode);    /* found true if entry is a directory */
+                      }
                     }
                   }
                 }
@@ -173,22 +184,19 @@ main(int argc, char **argv)
             }
             for(j=0 ; j<MAXAUG ; j++) {
               if(augptr[j] != NULL) {
-                if(found[j]) fprintf(stdout,"%s/%s%c",sub_path[i],augptr[j],separator);
+                if(found[j]) { fprintf(stdout,"%s/%s%c",sub_path[i],augptr[j],separator); }
+                else { if(verbose) fprintf(stderr,"'%s/%s' does not exist\n",sub_path[i],augptr[j]); }
               }
             }
-/*
-//            snprintf(extra_path,1023,"%s/%s",sub_path[i],supplement);
-//            extra_path[1023]='\0';
-//            if ( ! is_duplicate(extra_path,sub_path,nsubpath ) ) {
-//              fprintf(stdout,"%s/%s%c",sub_path[i],supplement,separator);
-//            }
-*/
+          }else{   /* path is not augmentable or there is no augmentation request */
+            if(verbose && *supplement != '\0') fprintf(stderr,"no lookup for '%s'\n",temp);
           }
           if( i == nsubpath-1 )
             fprintf(stdout,"%s'\n",sub_path[i]);
           else
             fprintf(stdout,"%s%c",sub_path[i],separator);
         }
+      }
     }else{   /* specified path environment variable does notexist, do nothing */
       if(verbose) fprintf(stderr,"%s: ERROR environment variable %s not found\n",progname,*argv);
     }
