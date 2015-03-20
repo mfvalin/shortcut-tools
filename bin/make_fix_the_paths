@@ -194,30 +194,12 @@ main(int argc, char **argv)
                         strncmp("/sbin",temp,5);
           if( *supplement != '\0' && augmentable ) {
             for(j=0 ; j<MAXAUG ; j++) found[j] = 0;
-#if defined(OLD_METHOD)
-            if(  dirfd = opendir(sub_path[i]) ) {
-              while( (my_dirent = readdir(dirfd)) != NULL ) {    /* scan parent directoty */
-                for(j=0 ; j<MAXAUG ; j++) {
-                  if(augptr[j] != NULL) {                        /* augmenter is not null */
-                    if( strcmp(my_dirent->d_name,augptr[j]) == 0 ){               /* augmenter entry found */
-                      snprintf(extra_path,1023,"%s/%s",sub_path[i],augptr[j]);
-                      if ( 0 == stat(extra_path,&stat_buf) ) {
-                        found[j] = S_ISDIR(stat_buf.st_mode);    /* found true if entry is a directory */
-                      }
-                    }
-                  }
-                }
-              }
-              closedir(dirfd);
-            }
-#else
             for(j=0 ; j<MAXAUG ; j++) {
               if(augptr[j] != NULL) {
                 snprintf(extra_path,1023,"%s/%s",sub_path[i],augptr[j]);
                 found[j] = is_a_dir(extra_path);
               }
             }
-#endif
             for(j=0 ; j<MAXAUG ; j++) {
               if(augptr[j] != NULL) {
                 if(found[j]) { fprintf(stdout,"%s/%s%c",sub_path[i],augptr[j],separator); }
