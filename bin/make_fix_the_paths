@@ -29,7 +29,7 @@ print_usage(char *name)
    fprintf(stderr,"ex:    %s -/a/b/ -machin/patente PATH MANPATH EC_LD_LIBRARY_PATH\n",name);
 }
 
-int is_dir_element(char *base, char *element)
+int is_dir_element(char *base, char *subpath)   /* is subpath a subdirectory of base ? */
 {
   DIR *dirfd;
   struct dirent *my_dirent;
@@ -37,60 +37,59 @@ int is_dir_element(char *base, char *element)
   int found = 0;
   char full_path[2048];
 
-  if(  dirfd = opendir(base) ){
-    snprintf(full_path,2047,"%s/%s",base,element);       /* build fullpath */
-    while( (my_dirent = readdir(dirfd)) != NULL ) {
-      if (0 == strcmp(my_dirent->d_name,element) ) {
-        if ( 0 == stat(full_path,&stat_buf) ) {          /* name match, stat it */
-          found = S_ISDIR(stat_buf.st_mode) ;            /* must be a directory */
+  if(  dirfd = opendir(base) ){                          /* directory base exists and can be read */
+    while( (my_dirent = readdir(dirfd)) != NULL ) {      /* read directory entries */
+      if (0 == strcmp(my_dirent->d_name,subpath) ) {     /* subpath found in directory  */
+        snprintf(full_path,2047,"%s/%s",base,subpath);   /* build fullpath (used later by stat)   */
+        if ( 0 == stat(full_path,&stat_buf) ) {          /* name match, stat the full path */
+          found = S_ISDIR(stat_buf.st_mode) ;            /* must be a directory to be considered found */
         }
+        break ;
       }
-      if(found) break;
-    }
+    }   /* while */
     closedir(dirfd);
   }
-  return found;
+  return found ;
 }
 
-int is_a_dir(char *base_path, char *extra)   /* is this a directory ? */
+#define MAXSUB 8
+int is_a_dir(const char *base_path, const char *extra)   /* is base_path + extra a directory ? */
 {
-  char extra_path[1024];
-  char full_base[2048];
-  int base_length;
-  char *subdirs[8];
-  int i, j, found;
-  char *pname;
-  DIR *dirfd;
-  struct dirent *my_dirent;
+  char extra_path[1024], full_base[2048] ;
+  char *pname, *subdirs[MAXSUB] ;
+  int nsub, j, found, base_length;
 
-  if(*extra == '\0') return 0;
+  if(*extra == '\0') return 0;            /* no extra path, return false */
+  strncpy(extra_path,extra,1023);         /* make local copy of extra */
+  extra_path[1023] = '\0' ;               /* make sure extra_path is null terminated */
 
-  strncpy(extra_path,extra,1023);
-
-  for(i=0 ; i<8 ; i++) subdirs[i] = "";   /* break extra_path into constituent subdirectories */
+  for(j=0 ; j<MAXSUB ; j++) subdirs[j] = "";   /* initialize subpaths to null string */
   pname = extra_path;
-  i = 0;
-  subdirs[i] = pname;
-  while(*pname != '\0') {
+  nsub = 0;
+  subdirs[0] = pname;
+  while(*pname != '\0') {                 /* break extra_path into constituent subdirectories */
     if(*pname == '/') {
-      *pname = '\0';
-      subdirs[++i] = pname + 1;
+      *pname = '\0';                      /* locate / characters and replace with nulls */
+      while(*pname == '/') pname++;       /* get rid of consecutive / characters */
+      if(nsub == MAXSUB) return 0 ;       /* too many subpaths, return failure */
+      subdirs[++nsub] = pname++ ;         /* remember starting positions of subdirectories */
+    }else{
+      pname++;
     }
-    pname++;
   }
 
-  strncpy(full_base,base_path,2047);
-  base_length = strlen(full_base);
+  strncpy(full_base,base_path,2047) ; full_base[2047] = '\0' ;
+  base_length = strlen(full_base);            /* base length of path */
   found = 0;
-  for (j=0 ; j<=i ; j++){       /* check one level at a time */
+  for (j=0 ; j<=nsub ; j++){                  /* check one level at a time */
     char *temp = subdirs[j];
-    if (*temp == '\0') break;
-    found = is_dir_element(full_base,temp);
-    if(found == 0) return found;
-    snprintf(full_base+base_length,2047-base_length,"/%s",temp);
-    base_length = strlen(full_base);
+    if (*temp == '\0') break;                 /* nothing to add any more */
+    found = is_dir_element(full_base,temp);   /* check if current path + addon is a directory */
+    if(found == 0) return found;              /* not found, no need to look further, return negative */
+    snprintf(full_base+base_length,2047-base_length,"/%s",temp);   /* add subpath at end of base path  */
+    base_length = strlen(full_base);          /* update base length of path */
   }
-  return found;
+  return found ;   /* all subdirs checked, return */
 }
 
 int is_duplicate(char *what, char **table, int nentries)  /* a non existent directory is treated like a duplicate */
@@ -101,41 +100,29 @@ int is_duplicate(char *what, char **table, int nentries)  /* a non existent dire
   for(i=0;i<n_eliminate;i++) { if ( strstr(what,1+eliminate[i]) ) return 1; } /* if found in list to eliminate, treat as duplicate */
   for(i=0;i<nentries;i++){
     if(table[i] != NULL) {
-      if(strcmp(what,table[i]) == 0) return 1;
+      if(strcmp(what,table[i]) == 0) return 1;    /* found in current list, it is a duplicate */
     }
   }
-  if ( 0 != stat(what,&stat_buf) ) return 1 ;  /* does not exist */
-  if( S_ISDIR(stat_buf.st_mode) )  return 0 ;  /* it is a directory */
+  if ( 0 != stat(what,&stat_buf) ) return 1 ;  /* does not exist, act as if it were a duplicate */
+  if( S_ISDIR(stat_buf.st_mode) )  return 0 ;  /* it is a directory and was not found in list */
   return 1;
 }
 
 #define MAXAUG 8
 main(int argc, char **argv)
 {
-  char *progname;
-  char *env_var;
-  char *supplement;
-  char augment[1024];
+  char *progname, *env_var, *supplement;
+  char augment[1024];     /* compound augmentation string */
   char *augptr[MAXAUG];   /* list of pointers to paths augmentations */
   int found[MAXAUG];
-  char *sub_path[1204];
-  char extra_path[1204];
-  char env_value[32768];
-  int nsubpath;
-  int i, j;
+  char *sub_path[1204];   /* used to split path variables into constituent elements */
+  char extra_path[1204], env_value[32768], ovbin[1024], tmpdir_bin[1024];
+  int i, j, nsubpath, len_ovbin, augmentable;
   char separator=':';
-  char *temp;
+  char *temp, *varname;
   char *TMPDIR=getenv("TMPDIR");
-  char tmpdir_bin[1024];
   char *HOME=getenv("HOME");
-  char ovbin[1024];
-  int len_ovbin;
-  char *varname;
-  struct stat stat_buf;
   int verbose=0;
-  DIR *dirfd;
-  struct dirent *my_dirent;
-  int augmentable;
 
   progname=argv[0];
   if(argc < 2 ) { print_usage(argv[0]) ; exit(1); }
@@ -158,7 +145,7 @@ main(int argc, char **argv)
   supplement="";
   augment[0] = '\0';
   for(i=0;i<MAXAUG;i++) augptr[i]=NULL;
-  while(argc--){                /* loop over cEnvName arguments */
+  while(argc--){                /* loop over arguments */
     varname=argv[0];
     if( *varname == '+' ) {     /* +dir1[+dir2][+dir3]... path augmentations */
       supplement=varname+1;
@@ -167,20 +154,20 @@ main(int argc, char **argv)
       augptr[0] = &augment[0];
       i = 0;
       temp = &augment[0];
-      while( *temp != '\0' ) { 
+      while( *temp != '\0' ) {     /* break into components */
         if (*temp == '+' ) { 
           *temp = '\0' ;
           if(temp[1] != '+') augptr[++i] = temp+1 ;  /* ignore multiple consecutive + */
         }
         temp++ ;
-        if( i == MAXAUG-1 ) break ;
+        if( i == MAXAUG-1 ) break ;   /* too many augmentations */
       }
-      while( i<MAXAUG ) augptr[++i] = NULL;
+      while( i<MAXAUG ) augptr[++i] = NULL;  /* nullify rest of table */
       argv++;
       continue;
     }
-    if( isalnum(*varname) || *varname=='_' ) {
-      separator = '\0';
+    if( isalnum(*varname) || *varname=='_' ) {  /* if first char of environment variable name not alphnum or _ , it is the separator */
+      separator = '\0';                         /* separator will be determined later from vartiable contents */
     }else{
       separator = *varname++;
     }
@@ -188,12 +175,12 @@ main(int argc, char **argv)
     if(env_var != NULL){        /* make sure it exists */
       strncpy(env_value,env_var,32767); env_value[32767]='\0';  /* take a copy */
       temp=env_value;
-      if(separator == '\0') {
+      if(separator == '\0') {   /* if separator flagged as auto */
         while(*temp != '\0' && *temp != ':' &&  *temp != ' ' && *temp != ';') temp++;  /* find separator, one of blank , colon, semicolon */
         separator=*temp;
       }
       temp=env_value;
-      if(separator == '\0') separator = ':' ;
+      if(separator == '\0') separator = ':' ;                   /* default if nothing was found */
       while( *temp == separator && *temp != '\0') temp++;       /* get rid of leading separators */
 
       nsubpath=1;
@@ -207,27 +194,27 @@ main(int argc, char **argv)
           nsubpath--;
         while( *temp == separator && *temp != '\0') temp++;     /* skip all consecutive separators */
         if(*temp == '\0') break;                                /* OOPS end */
-        sub_path[nsubpath++]=temp;
+        sub_path[nsubpath++]=temp;                              /* update path element table */
       }
       if(nsubpath < 1) goto try_next;                            /* nothing was found */
       if(is_duplicate(sub_path[nsubpath-1],sub_path,nsubpath-1)) /* is last entry in path a duplicate ? */
         nsubpath--;
       if(nsubpath < 1) goto try_next;                            /* nothing was found */
 
-      fprintf(stdout,"%s='",varname);                            /* variable_name= */
+      fprintf(stdout,"%s='",varname);                            /* print variable_name= */
 
       for(i=0 ; i<nsubpath ; i++){
          if(0 == strcmp(sub_path[i],tmpdir_bin) ){               /* $TMPDIR/bin ? */
-           fprintf(stdout,"%s%c",sub_path[i],separator);
-           sub_path[i]=NULL;                                     /* yes, suppress entry */
+           fprintf(stdout,"%s%c",sub_path[i],separator);         /* print it immediately */
+           sub_path[i]=NULL;                                     /* and suppress entry */
          }
       }
       while(sub_path[nsubpath-1] == NULL) nsubpath--;            /* suppress NULLs at tail of list */
       for(i=0 ; i<nsubpath ; i++){
          if(sub_path[i] == NULL) continue;
          if(0 == strncmp(sub_path[i],ovbin,len_ovbin) ){         /* $HOME/ovbin... ? */
-           fprintf(stdout,"%s%c",sub_path[i],separator);
-           sub_path[i]=NULL;                                     /* yes, suppress entry */
+           fprintf(stdout,"%s%c",sub_path[i],separator);         /* print it immediately */
+           sub_path[i]=NULL;                                     /* and suppress entry */
          }
       }
       while(sub_path[nsubpath-1] == NULL) nsubpath--;            /* suppress NULLs at tail of list */
@@ -238,7 +225,7 @@ main(int argc, char **argv)
           augmentable = strncmp("/usr/",temp,5) * strncmp("/opt",temp,4) * 
                         strncmp("/bin",temp,4)  * strncmp("/etc",temp,4) *
                         strncmp("/sbin",temp,5);
-          if( *supplement != '\0' && augmentable ) {
+          if( *supplement != '\0' && augmentable ) {             /* path must be "augmentable" */
             for(j=0 ; j<MAXAUG ; j++) found[j] = 0;
             for(j=0 ; j<MAXAUG ; j++) {
               if(augptr[j] != NULL) {
@@ -264,7 +251,7 @@ main(int argc, char **argv)
             fprintf(stdout,"%s%c",sub_path[i],separator);
         }
       }
-    }else{   /* specified path environment variable does notexist, do nothing */
+    }else{   /* specified path environment variable does not exist, do nothing */
       if(verbose) fprintf(stderr,"%s: ERROR environment variable %s not found\n",progname,*argv);
     }
 try_next:
