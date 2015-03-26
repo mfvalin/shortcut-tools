@@ -16,7 +16,8 @@
   export EC_LD_LIBRARY_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include:%/lib %g' -e 's/:/ /g' ) "
 #
 # cleanup and expansion for EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH (used later by s.compile and consorts)
-  COMP_ARCH=${COMP_ARCH:-${EC_ARCH#${BASE_ARCH}/}}    # in case it is not defined
+  COMP_ARCH=${COMP_ARCH:-${EC_ARCH#${BASE_ARCH}}}    # in case it is not defined
+  COMP_ARCH=${COMP_ARCH#/}
   eval $(r.fix_the_paths ${VerboseCleanupActive} +${ORDENV_PLAT}/${COMP_ARCH}+${COMP_ARCH}+${EC_ARCH} EC_INCLUDE_PATH +${ORDENV_PLAT}/${COMP_ARCH}+${COMP_ARCH}+${EC_ARCH} EC_LD_LIBRARY_PATH)
 #
 unset VerboseCleanupActive
