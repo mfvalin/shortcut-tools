@@ -44,6 +44,7 @@ if [[ "$1" = '-append' ]] ; then   shift ; fi # feature no longer supported by s
 fonc='use'
 if [[ "$1" = '-unuse' ]] ; then  # will now work only for gnu modules 
 #  fonc='unuse'
+  add_unload="unload"
   shift
 fi
 if [[ "$2" = "-p" ]]
@@ -114,7 +115,7 @@ do
     continue ;
   fi
 # if we get to this point it must be a module
-  . module.dot add ${Target} && continue
+  . module.dot ${add_unload:-add} ${Target} && continue
 # OOPS, nothing matches
   echo ERROR: NO SHORTCUT FOUND FOR ${Target}
 done
