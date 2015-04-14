@@ -162,7 +162,7 @@ main(int argc, char **argv)
         temp++ ;
         if( i == MAXAUG-1 ) break ;   /* too many augmentations */
       }
-      while( i<MAXAUG ) augptr[++i] = NULL;  /* nullify rest of table */
+/*      while( i<MAXAUG ) augptr[++i] = NULL; */ /* nullify rest of table */
       argv++;
       continue;
     }
