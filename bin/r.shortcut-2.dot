@@ -59,8 +59,8 @@ echo shortcut${ENV_TEST_MODE}.dot "$@"
 # get error messages and print them
 #Targets="$(s.resolve_ssm_shortcuts${ENV_TEST_MODE} $*  2>$TMPDIR/resolve_messages_$$)"
 Targets="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$)"
-cat $TMPDIR/resolve_messages_$$
-rm -f $TMPDIR/resolve_messages_$$
+${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
+${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 
 #for Target in $(r.resolve_shortcuts${ENV_TEST_MODE} "$@" )
 ModuleMode=Add
