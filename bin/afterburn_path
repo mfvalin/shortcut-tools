@@ -1,26 +1,28 @@
 #!/bin/bash
 if [[ "$1" == --help || "$1" == -h ]] ; then
   echo "USAGE: ${0##*/} [-h|--help] [-v] [--lib] [--cleanup|--restore] [maxdirsize] \$PATH|\$LD_LIBRARY_PATH|\$LIBPATH (arguments are order dependent)" 1>&2
-  echo "       version = 1.0.0 2015/01/20"  1>&2
+  echo "       version = 1.0.1 2015/04/16"  1>&2
   exit 0
 fi
 Where=$(true_path ${0})
 Where=${Where%/*}
 [[ -x ${TMPDIR}/bin/link_files_in_dir ]] || ${Where%/*}/bin/make_link_files_in_dir
 [[ -x ${TMPDIR}/bin/link_files_in_dir ]] || exit 1  # cannot make the needed program
-Verbose=""
-[[ "$1" == "-v" ]] && Verbose="yes" && shift 1>&2
+Verbose="0"
+[[ "$1" == "-v" ]]   && Verbose="1" && shift 1>&2
+[[ "$1" == "-vv" ]]  && Verbose="2" && shift 1>&2
+[[ "$1" == "-vvv" ]] && Verbose="3" && shift 1>&2
 
 LibMode=""
 [[ "$1" == "--lib" ]] && LibMode="--lib" && shift   # LD_LIBRARY_PATH/LIBPATH rather than PATH
 
 rm -rf $TMPDIR/.path_cache${LibMode}_1*   # cleanup before processing
-[[ -n ${Verbose} ]] && echo "INFO: removing fast path directories $TMPDIR/.path_cache${LibMode}_1*"  1>&2
+((Verbose>0)) && echo "INFO: removing fast path directories $TMPDIR/.path_cache${LibMode}_1*"  1>&2
 [[ "$1" == "--cleanup" ]] && rm -f $TMPDIR/.path_cache${LibMode}* && exit 0
 
 [[ -f $TMPDIR/.path_cache${LibMode} ]] && . $TMPDIR/.path_cache${LibMode}
 
-[[ "$1" == "--restore" ]] && echo "PATH=${OldPathValue:-${PATH}}" && exit 0
+[[ "$1" == "--restore" ]] && shift && echo "${OldPathValue:-${*}}" && exit 0
 #
 Number=""
 if [[ "$1" == [1-9]* ]] ; then
@@ -35,16 +37,24 @@ NewPath=""
 for Target in $(echo $* | tr ':' '\n') 
 do
   [[ ${Target} == ${TMPDIR}/bin ]] && continue   # red herring in library mode
+  ((Verbose>2)) && echo "INFO: processing '${Target}'" 1>&2
 #
-  ${TMPDIR}/bin/link_files_in_dir ${LibMode} ${Number} ${Target}  ; status=$?  # status=2 means too many entries to be worth linking
+  if [[ ${Target} == /usr/* || ${Target} == /bin || ${Target} == /sbin || ${Target} == /opt* || ${Target} == /lib* ]] ; then
+    ((status!=3))                           # status 3 if directory does not exist
+    [[ -d ${Target} ]] && status=2          # /usr/... and it exists,  do no bother optimizing
+    ((Verbose>2)) && echo "INFO: ignoring '${Target}'" 1>&2
+  else
+    ${TMPDIR}/bin/link_files_in_dir ${LibMode} ${Number} ${Target}
+    status=$?  # status=2 if too many entries to be worth linking
+  fi
   ((status==3)) && continue                 # cannot open directory, ignore it
-
+#
   if [[ ${Target} != /* ]] ; then           # non absolute path, keep as is
     [[ -d ${Target} ]] && NewPath="${NewPath}:${Target}"
     continue
   fi
 #
-  [[ -n ${Verbose} ]] && echo "${status} ${Target}"   1>&2
+  ((Verbose>1)) && echo "${status} ${Target}"   1>&2
   case ${status} in
     0) # reasonable number of entries in directory, use soft links
        ((NewDir==1)) && \
@@ -71,8 +81,8 @@ do
   esac
 done
 NewPath="${NewPath#:}"
-[[ -n ${Verbose} ]] && echo "INFO: optimized path will be"   1>&2
-[[ -n ${Verbose} ]] && echo "${NewPath}" | tr ':' '\n' 1>&2
-echo "OldPathValue=${PATH}"    >$TMPDIR/.path_cache${LibMode}
+((Verbose>0)) && echo "INFO: optimized path will be"   1>&2
+((Verbose>0)) && echo "${NewPath}" | tr ':' '\n' 1>&2
+echo "OldPathValue=${*}"    >$TMPDIR/.path_cache${LibMode}
 echo "NewPathValue=${NewPath}" >>$TMPDIR/.path_cache${LibMode}
 echo "${NewPath}"
