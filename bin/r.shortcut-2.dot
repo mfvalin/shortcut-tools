@@ -1,6 +1,6 @@
 #      bash or ksh
 if [[ "$1" = -h || "$1" = --he* ]] ; then
-  echo "usage: . r.shortcut-2.dot [--dry-run] [-list ] [-append] [-unuse] ITEM1 ... ITEMn"
+  echo "usage: . r.shortcut.dot [--dry-run] [-list ] [-append] [-unuse] ITEM1 ... ITEMn"
   echo "NOTE: arguments are ORDER DEPENDENT"
   return
 fi

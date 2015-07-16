@@ -1,3 +1,5 @@
+if tty -s 
+then
 #
 _shortcut_compfn()
 {
@@ -37,9 +39,11 @@ echo ${Liste:-${1:-[a-zA-Z0-9]}}
 }
 #
 echo overriding alias shortcut
-alias shortcut='. r.shortcut.dot'
+alias r.shortcut='. r.shortcut.dot'
 complete -F _shortcut_compfn shortcut
 #
 #make_link_files_in_dir
-make_fix_the_paths
+#make_fix_the_paths
+fi
 [[ -n "$MODULEPATH" ]] && export MODULEPATH="`eval echo $MODULEPATH`"
+export EC_SHORTCUT_PATH=/ssm/net
