@@ -40,7 +40,7 @@ echo ${Liste:-${1:-[a-zA-Z0-9]}}
 #
 echo overriding alias shortcut
 alias r.shortcut='. r.shortcut.dot'
-complete -F _shortcut_compfn shortcut
+complete -F _shortcut_compfn r.shortcut
 #
 #make_link_files_in_dir
 #make_fix_the_paths
