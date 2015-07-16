@@ -244,7 +244,7 @@ done
 evaluate_condition "${GlobalDep#:}"
 status=$?
 [[ $status != 0 ]] && echo "ERROR:S ${GlobalDep#:} failed, exiting" 1>&2 &&  exit $status
-Assignations="$(echo ${GlobalDep#:} | \${CMD_sed:-$(which sed)} -e 's/[.]not[.]//' -e 's/[a-zA-Z0-9]*[.][a-z][a-z][.][a-zA-Z0-9]*//g' -e 's/[:][:]*/;/g')"
+Assignations="$(echo ${GlobalDep#:} | ${CMD_sed:-$(which sed)} -e 's/[.]not[.]//' -e 's/[a-zA-Z0-9]*[.][a-z][a-z][.][a-zA-Z0-9]*//g' -e 's/[:][:]*/;/g')"
 echo "Global tag values: ${Assignations//;/ }" 1>&2
 # output names if global dependencies are satisfied
 for i in  $ProcessedItems
