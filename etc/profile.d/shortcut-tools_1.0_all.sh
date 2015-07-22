@@ -1,13 +1,13 @@
 if tty -s 
 then
 #
-_shortcut_compfn()
+_r.shortcut_comp()
 {
  local cur prev opts cmd
  cmd="${1##*/}"
  COMPREPLY=()
  cur="${COMP_WORDS[COMP_CWORD]}"
- COMPREPLY=( $(compgen -W "$(_complete_shortcut ${cur} )" ) )
+ COMPREPLY=( $(compgen -W "$(_r.shortcut.dot ${cur} )" ) )
  [[ $BASH_VERSION == 4* ]] && compopt -o nospace
  return 0
 }
@@ -32,15 +32,46 @@ do
 done
 }
 #
-_complete_shortcut()
+_r.shortcut.dot()
 {
 Liste="$(_shortcut_possibilities "${1:-[a-zA-Z0-9]}" | sed -e 's/[.]sh$//g' -e 's/[.]bndl$//' -e 's://:/:' | grep -v '[*]$' | sort -u)"
 echo ${Liste:-${1:-[a-zA-Z0-9]}}
 }
 #
-echo overriding alias shortcut
+FindDottableName()
+{
+ for i in ${PATH//:/\/${1:-NoTaRgEt}* } ; do [[ -r $i ]] && [[ ! -x $i ]] && echo ${i##*/} ; done
+}
+#
+_DottableCompletion()
+{
+  local cur
+  COMPREPLY=()
+  cur=${COMP_WORDS[COMP_CWORD]}
+  [[ $BASH_VERSION == 4* ]] && compopt -o nospace
+  if (( COMP_CWORD > 1 )) ; then           #  after first completed word
+    Fname="_${COMP_WORDS[1]}"
+    if [[ "$(type -t ${Fname} )" == function ]] ; then      # there is a function with the same name prefixed by _
+      COMPREPLY=( $(compgen -W "$(${Fname} ${cur} )" ) )
+    elif [[ -x "$TMPDIR/bin/${Fname}" ]] ; then             # there is a cached command with the same name prefixed by _
+      COMPREPLY=( $(compgen -W "$(${Fname} ${cur} )" ) )
+    elif [[ -n "$(which ${Fname} 2>/dev/null)" ]] ; then    # there is a command with the same name prefixed by _
+      ln -sf "$(which ${Fname})" ${TMPDIR}/bin/${Fname}     # cache the command for next time
+      COMPREPLY=( $(compgen -W "$(${Fname} ${cur} )" ) )
+    else
+      COMPREPLY=( $(compgen -f "${cur}" ) )                 # fallback, regular filename completion
+    fi
+  else
+    COMPREPLY=( $(compgen -W "$(FindDottableName ${cur} )" ) ) # completion for first token
+  fi
+}
+#
+#
+echo overriding alias r.shortcut , adding auto-completion for . and source
 alias r.shortcut='. r.shortcut.dot'
-complete -F _shortcut_compfn r.shortcut
+complete -F _r.shortcut_comp r.shortcut
+complete -o nospace -F _DottableCompletion .
+complete -o nospace -F _DottableCompletion source
 #
 #make_link_files_in_dir
 #make_fix_the_paths
