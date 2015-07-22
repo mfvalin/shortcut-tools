@@ -7,7 +7,7 @@ _r.shortcut_comp()
  cmd="${1##*/}"
  COMPREPLY=()
  cur="${COMP_WORDS[COMP_CWORD]}"
- COMPREPLY=( $(compgen -W "$(_r.shortcut.dot ${cur} )" ) )
+ COMPREPLY=( $(compgen -W "$(_r.shortcut.dot ${cur} )" ) )  # explicit directory, shortcut or module
  [[ $BASH_VERSION == 4* ]] && compopt -o nospace
  return 0
 }
@@ -34,13 +34,34 @@ done
 #
 _r.shortcut.dot()
 {
-Liste="$(_shortcut_possibilities "${1:-[a-zA-Z0-9]}" | sed -e 's/[.]sh$//g' -e 's/[.]bndl$//' -e 's://:/:' | grep -v '[*]$' | sort -u)"
+if [[ "${1}" == ./* || "${1}" == /* ]] ; then
+  Liste="$(FindDottableDir ${1})"    # explicit path to directory
+else
+  Liste="$(_shortcut_possibilities "${1:-[a-zA-Z0-9]}" | sed -e 's/[.]sh$//g' -e 's/[.]bndl$//' -e 's://:/:' | grep -v '[*]$' | sort -u)"
+fi
 echo ${Liste:-${1:-[a-zA-Z0-9]}}
 }
 #
 FindDottableName()
 {
  for i in ${PATH//:/\/${1:-NoTaRgEt}* } ; do [[ -r $i ]] && [[ ! -x $i ]] && echo ${i##*/} ; done
+}
+#
+FindDottableDir()
+{
+ for i in ${1:-NoTaRgEt}* }
+ do
+   [[ -d $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${i}/     # directory, readable, accessible
+ done
+}
+#
+FindDottableFile()
+{
+ for i in ${1:-NoTaRgEt}* }
+ do
+   [[ -f $i ]] && [[ -r $i ]] && [[ ! -x $i ]] && echo ${i}   # file, not executable
+   [[ -d $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${i}/     # directory, readable, accessible
+ done
 }
 #
 _DottableCompletion()
@@ -62,7 +83,11 @@ _DottableCompletion()
       COMPREPLY=( $(compgen -f "${cur}" ) )                 # fallback, regular filename completion
     fi
   else
-    COMPREPLY=( $(compgen -W "$(FindDottableName ${cur} )" ) ) # completion for first token
+    if [[ "${cur}" == ./* || "${cur}" == /* ]] ; then
+      COMPREPLY=( $(compgen -W "$(FindDottableFile ${cur} )" ) ) # file name, use file completion rules
+    else
+      COMPREPLY=( $(compgen -W "$(FindDottableName ${cur} )" ) ) # completion for first token if a name
+    fi
   fi
 }
 #
