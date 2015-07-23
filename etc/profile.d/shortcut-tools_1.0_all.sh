@@ -14,12 +14,12 @@ then
     return 0
     }
     #
-    _echo_dir()
-    {
-      _item=${1}
-      [[ -d ${_item} ]] && echo ${_item}/
-      [[ -f ${_item} ]] && echo ${_item}
-    }
+#    _echo_dir()
+#    {
+#      _item=${1}
+#      [[ -d ${_item} ]] && echo ${_item}/
+#      [[ -f ${_item} ]] && echo ${_item}
+#    }
     #
     _shortcut_possibilities()
     {
@@ -27,8 +27,10 @@ then
     do
       if [[ -d $j ]] ; then
         cd $j
-        for i in ${1}* ; do
-        _echo_dir "$i"
+        for Item in ${1}* ; do
+          [[ -d ${Item} ]] && echo ${Item}/
+          [[ -f ${Item} ]] && echo ${Item}
+#        _echo_dir "$i"
         done
       fi
     done
