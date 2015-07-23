@@ -36,6 +36,11 @@ then
     done
     }
     #
+    _s.ssmuse.dot()
+    {
+       _r.shortcut.dot "${1}"
+    }
+    #
     _r.shortcut.dot()
     {
     if [[ "${1}" == ./* || "${1}" == /* ]] ; then
