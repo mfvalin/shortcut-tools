@@ -40,12 +40,12 @@ do
   ((Verbose>2)) && echo "INFO: processing '${Target}'" 1>&2
 #
   if [[ ${Target} == /usr/* || ${Target} == /bin || ${Target} == /sbin || ${Target} == /opt* || ${Target} == /lib* ]] ; then
-    ((status!=3))                           # status 3 if directory does not exist
+    ((status=3))                            # status 3 if directory does not exist
     [[ -d ${Target} ]] && status=2          # /usr/... and it exists,  do no bother optimizing
     ((Verbose>2)) && echo "INFO: ignoring '${Target}'" 1>&2
   else
     ${TMPDIR}/bin/link_files_in_dir ${LibMode} ${Number} ${Target}
-    status=$?  # status=2 if too many entries to be worth linking
+    status=$?  # status=2 if too many entries to be worth linking, status=2 if directory does not exist
   fi
   ((status==3)) && continue                 # cannot open directory, ignore it
 #
