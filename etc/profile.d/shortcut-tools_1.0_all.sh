@@ -56,10 +56,10 @@ then
     for i in ${PATH//:/\/${1:-NoTaRgEt}* } ; do [[ -r $i ]] && [[ -f $i ]] && [[ ! -x $i ]] && echo ${i##*/} ; done
     }
     #
-    FindExecutableName()
-    {
-    for i in ${PATH//:/\/${1:-NoTaRgEt}* } ; do [[ -r $i ]] && [[ -f $i ]] && [[ -x $i ]] && echo ${i##*/} ; done
-    }
+#     FindExecutableName()
+#     {
+#     for i in ${PATH//:/\/${1:-NoTaRgEt}* } ; do [[ -r $i ]] && [[ -f $i ]] && [[ -x $i ]] && echo ${i##*/} ; done
+#     }
     #
     FindDottableDir()
     {
@@ -69,14 +69,14 @@ then
     done
     }
     #
-    FindExecutableFile()
-    {
-    for i in ${1:-NoTaRgEt}* }
-    do
-      [[ -f $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${i}      # file,  executable
-      [[ -d $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${i}/     # directory, readable, accessible
-    done
-    }
+#     FindExecutableFile()
+#     {
+#     for i in ${1:-NoTaRgEt}* }
+#     do
+#       [[ -f $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${i}      # file,  executable
+#       [[ -d $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${i}/     # directory, readable, accessible
+#     done
+#     }
     #
     FindDottableFile()
     {
@@ -87,18 +87,18 @@ then
     done
     }
     #
-    _ExecutableCompletion()
-    {
-      local cur
-      COMPREPLY=()
-      cur=${COMP_WORDS[COMP_CWORD]}
-      [[ $BASH_VERSION == 4* ]] && compopt -o nospace
-      if [[ "${cur}" == ./* || "${cur}" == /* ]] ; then
-        COMPREPLY=( $(compgen -W "$(FindExecutableFile ${cur} )" ) ) # file name, use file completion rules
-      else
-        COMPREPLY=( $(compgen -W "$(FindExecutableName ${cur} )" ) ) # completion for first token if a name
-      fi
-    }
+#     _ExecutableCompletion()
+#     {
+#       local cur
+#       COMPREPLY=()
+#       cur=${COMP_WORDS[COMP_CWORD]}
+#       [[ $BASH_VERSION == 4* ]] && compopt -o nospace
+#       if [[ "${cur}" == ./* || "${cur}" == /* ]] ; then
+#         COMPREPLY=( $(compgen -W "$(FindExecutableFile ${cur} )" ) ) # file name, use file completion rules
+#       else
+#         COMPREPLY=( $(compgen -W "$(FindExecutableName ${cur} )" ) ) # completion for first token if a name
+#       fi
+#     }
     _DottableCompletion()
     {
       local cur
