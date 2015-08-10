@@ -102,6 +102,10 @@ then
     #
     #
     echo overriding alias r.shortcut , adding auto-completion for . and source
+    if [[ -d /unique/armnssm || -d /sb/software/areas ]] ; then
+      alias shortcut='. r.shortcut.dot'
+      complete -F _r.shortcut_comp shortcut
+    fi
     alias r.shortcut='. r.shortcut.dot'
     complete -F _r.shortcut_comp r.shortcut
     complete -o nospace -F _DottableCompletion .
