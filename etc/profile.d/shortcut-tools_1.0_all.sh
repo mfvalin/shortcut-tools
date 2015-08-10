@@ -136,7 +136,8 @@ then
     complete -F _r.shortcut_comp r.shortcut
     complete -o nospace -F _DottableCompletion .
     complete -o nospace -F _DottableCompletion source
-    complete -o nospace -F _ExecutableCompletion which
+#    complete -o nospace -F _ExecutableCompletion which
+    complete -c command type which
     #
     #make_link_files_in_dir
     #make_fix_the_paths
