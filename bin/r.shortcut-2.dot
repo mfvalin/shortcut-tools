@@ -111,7 +111,8 @@ do
     echo USING SHORTCUT $Target ;
     . $Target ;
     StAtUs=$? ;
-    if [[ ${StAtUs} == "111" ]] ; then echo "ABORT Requested while processing shortcut ${Target}" ; break ; fi
+    if [[ ${StAtUs} == "111" ]] ; then echo "ERROR: abort requested by shortcut ${Target}" ; break ; fi
+    if [[ ${StAtUs} == "110" ]] ; then echo "WARNING: exit requested by shortcut ${Target}" ; break ; fi
     continue ;
   fi
 # if we get to this point it must be a module
