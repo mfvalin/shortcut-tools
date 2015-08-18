@@ -18,7 +18,7 @@ function is_shortcut
                                        && echo ${Prefix}/${1}      && return 0   # link to domain
     [[ -f ${Prefix}/${1}/.version ]]        \
                                        && echo ${1}      && return 0   # gnu module
-    [[ -f ${Prefix}/${1} ]] && head -1 ${Prefix}/${1} | grep -q '^#%Module'  \
+    [[ -f ${Prefix}/${1} ]] && head -1 ${Prefix}/${1} | ${CMD_grep:-$(which grep)} -q '^#%Module'  \
                                        && echo ${1}      && return 0   # gnu module
   done
   return 1  # nothing appropriate found
@@ -60,7 +60,7 @@ function evaluate_condition
 #  Condition=${1//[:]*/:}
 #  echo "validating $Condition" 1>&2
   echo "${Condition//[:]*/ ; }" | \
-  sed -e 's/[.]not[.]/!/' -e 's/\([a-zA-Z0-9]*\)[.]\([a-z][a-z]\)[.]\([a-zA-Z0-9]*\)/[[ \$\1 -\2 \3 ]] || exit 1/g'  -e 's/![[][[]/[[ !/' | \
+  ${CMD_sed:-$(which sed)} -e 's/[.]not[.]/!/' -e 's/\([a-zA-Z0-9]*\)[.]\([a-z][a-z]\)[.]\([a-zA-Z0-9]*\)/[[ \$\1 -\2 \3 ]] || exit 1/g'  -e 's/![[][[]/[[ !/' | \
   ksh93
 }
 
@@ -174,7 +174,7 @@ function process_item
 #      BundleName=${BundleName%.bndl}
       BundleName=${ItemShortName}
       LogFlags=""
-      set -A BundleContents $(grep -v '^#' $ItemName | xargs)
+      set -A BundleContents $(${CMD_grep:-$(which grep)} -v '^#' $ItemName | ${CMD_xargs:-$(which xargs)})
       if [[ ${BundleContents[0]} == *: ]] ; then
         #echo "condition at head of bundle: ${BundleContents[0]}" 1>&2
         if ! validate_item ${BundleContents[0]} ; then     # bundle dependencies satisfied ?
@@ -197,7 +197,7 @@ function process_item
       ProcessedItems="${ProcessedItems} ++${BundlePath}"
     else                            # xxx.sh or soft link to a domain or a module
       ProcessedItems="${ProcessedItems} $ItemName"
-      [[ -f "${ItemName%.sh}.dep" ]] && GlobalDep="${GlobalDep}:$(cat ${ItemName%.sh}.dep)"
+      [[ -f "${ItemName%.sh}.dep" ]] && GlobalDep="${GlobalDep}:$(${CMD_cat:-$(which cat)} ${ItemName%.sh}.dep)"
     fi
   else  # must be package@domain or it is an error
     ItemName=`is_package_in_domain ${1##*:}`
@@ -222,7 +222,7 @@ GlobalAbort=""           # set if a GLOB condition failed
 #LocalData="$(r.unified_setup-cfg -local || echo $ARMNLIB)/data"     # get path to "system" data
 
 # add SSM_SHORTCUT_PATH to places to scan, but get rid of . because it is unsafe
-#Prefixes="$(echo $SSM_SHORTCUT_PATH | sed -e 's/:/ /g' -e 's/[.] //'g -e 's/ [.]//g') $HOME/my_ssm_domains ${LocalData}/ssm_domains"
+#Prefixes="$(echo $SSM_SHORTCUT_PATH | ${CMD_sed:-$(which sed)} -e 's/:/ /g' -e 's/[.] //'g -e 's/ [.]//g') $HOME/my_ssm_domains ${LocalData}/ssm_domains"
 Prefixes="$( r.shortcut-cfg --paths )"
 
 # list of processed and verified items
@@ -230,7 +230,7 @@ ProcessedItems=""
 
 # list of global dependencies
 GlobalDep=""
-[[ -r ${TMPDIR}/.GlobalDep ]] && GlobalDep="$(cat ${TMPDIR}/.GlobalDep)"
+[[ -r ${TMPDIR}/.GlobalDep ]] && GlobalDep="$(${CMD_cat:-$(which cat)} ${TMPDIR}/.GlobalDep)"
 
 # expand bundles recursively, max depth=9
 DepthCount=10
@@ -244,7 +244,7 @@ done
 evaluate_condition "${GlobalDep#:}"
 status=$?
 [[ $status != 0 ]] && echo "ERROR:S ${GlobalDep#:} failed, exiting" 1>&2 &&  exit $status
-Assignations="$(echo ${GlobalDep#:} | \sed -e 's/[.]not[.]//' -e 's/[a-zA-Z0-9]*[.][a-z][a-z][.][a-zA-Z0-9]*//g' -e 's/[:][:]*/;/g')"
+Assignations="$(echo ${GlobalDep#:} | ${CMD_sed:-$(which sed)} -e 's/[.]not[.]//' -e 's/[a-zA-Z0-9]*[.][a-z][a-z][.][a-zA-Z0-9]*//g' -e 's/[:][:]*/;/g')"
 echo "Global tag values: ${Assignations//;/ }" 1>&2
 # output names if global dependencies are satisfied
 for i in  $ProcessedItems
