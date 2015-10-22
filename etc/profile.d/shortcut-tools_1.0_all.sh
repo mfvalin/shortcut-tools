@@ -1,7 +1,10 @@
+[[ -n "$MODULEPATH" ]] && export MODULEPATH="`eval echo $MODULEPATH`"
+export EC_SHORTCUT_PATH=/ssm/net
+
+[[ -n $BASH_VERSION ]] || { echo "Warning: this is not a bash shell. Shortcut completion not enabled" ; return ; }
+
 if tty -s 
 then
-  if [[ -n $BASH_VERSION ]]
-  then
     #
     _r.shortcut_comp()
     {
@@ -141,7 +144,4 @@ then
     #
     #make_link_files_in_dir
     #make_fix_the_paths
-  fi
 fi
-[[ -n "$MODULEPATH" ]] && export MODULEPATH="`eval echo $MODULEPATH`"
-export EC_SHORTCUT_PATH=/ssm/net
