@@ -117,7 +117,7 @@ do
     continue ;
   fi
 # if we get to this point it must be a module
-  if . module.dot ${add_unload:-add} ${Target} ; then
+  if . module.dot ${add_unload:-add} ${Target} 2>&1 ; then
     echo "INFO: ${add_unload:-add} ${Target}"
     continue
   else
