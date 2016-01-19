@@ -1,7 +1,7 @@
 #      bash or ksh
 if [[ "$1" = -h || "$1" = --he* ]] ; then
   echo "usage: . r.shortcut.dot [--dry-run] [-list ] [-append] [-unuse] ITEM1 ... ITEMn"
-  echo "NOTE: arguments are ORDER DEPENDENT"
+  echo "NOTE: arguments are ORDER DEPENDENT -append is deprecated and ignored"
   return
 fi
 [[ "$1" = -list || "$1" = --list ]] && shift && r.shortcuts
@@ -42,6 +42,7 @@ StAtUs=0
 if [[ "$1" = '-append' ]] ; then   shift ; fi # feature no longer supported by ssm, accepted and ignored for backward compatibility
 #
 fonc='use'
+add_unload=""
 if [[ "$1" = '-unuse' ]] ; then  # will now work only for gnu modules 
 #  fonc='unuse'
   add_unload="unload"
@@ -116,9 +117,14 @@ do
     continue ;
   fi
 # if we get to this point it must be a module
-  . module.dot ${add_unload:-add} ${Target} && continue
+  if . module.dot ${add_unload:-add} ${Target} ; then
+    echo "INFO: ${add_unload:-add} ${Target}"
+    continue
+  else
+    echo "ERROR: abort requested by . module.dot ${add_unload:-add} ${Target}" ; break ;
+  fi
 # OOPS, nothing matches
-  echo ERROR: NO SHORTCUT FOUND FOR ${Target}
+  echo WARNING: NO SHORTCUT FOUND FOR ${Target}
 done
 unset SSM_SHORTCUT || true
 # cleanup of PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
