@@ -1,6 +1,11 @@
 #!/bin/bash
 #which cc 1>/dev/null 2>/dev/null || exit 1
+[[ -x $TMPDIR/bin/r.fix_the_paths ]] && exit 0
+Me=$(true_path $0)
 cd $TMPDIR/bin || exit 1
+[[ -x ${Me%/bin/*}/bin/r.fix_the_paths ]] && \
+   cp ${Me%/bin/*}/bin/r.fix_the_paths $TMPDIR/bin/r.fix_the_paths && \
+   echo "=== using ./r.fix_the_paths ==="
 [[ -x $TMPDIR/bin/r.fix_the_paths ]] && exit 0
 cat <<"EOT" >r.fix_the_paths.c
 #include <stdlib.h>
@@ -267,4 +272,4 @@ try_next:
 EOT
 #cc r.fix_the_paths.c -o r.fix_the_paths
 make r.fix_the_paths
-rm -f r.fix_the_paths.c
+#rm -f r.fix_the_paths.c
