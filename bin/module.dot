@@ -1,3 +1,14 @@
 echo "INFO: module $@"
-[[ -x ${MODULESHOME}/bin/modulecmd ]] || { echo ERROR: module command not found ; return 1 ; }
+#[[ -x ${MODULESHOME}/bin/modulecmd ]] || { echo ERROR: module command not found ; return 1 ; }
+#eval `${MODULESHOME}/bin/modulecmd bash $*`
+if [[ -x ${MODULESHOME}/bin/modulecmd ]] ; then
 eval `${MODULESHOME}/bin/modulecmd bash $*`
+else
+module ()
+{
+    eval $($LMOD_CMD bash "$@");
+    [ $? = 0 ] && eval $(${LMOD_SETTARG_CMD:-:} -s sh)
+}
+module "$@"
+fi
+echo MODULEPATH=$MODULEPATH
