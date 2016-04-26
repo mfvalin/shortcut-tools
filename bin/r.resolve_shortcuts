@@ -59,6 +59,9 @@ function evaluate_condition
   Condition=${1#:}
 #  Condition=${1//[:]*/:}
 #  echo "validating $Condition" 1>&2
+#            all : replaced by ;   (separate conditions/expressions before feeding into shell)
+#            .not. =>  !        varname.op.xxx  => [[ $varname -op xxx ]] || exit 1                    ![[ => [[ !
+#  example: j=123:.not.aa.eq.12:bb.ge.6  => j=123 ; [[ ! $aa -eq 12 ]] || exit 1 ; [[ $bb -ge 6 ]] || exit 1
   echo "${Condition//[:]*/ ; }" | \
   ${CMD_sed:-$(which sed)} -e 's/[.]not[.]/!/' -e 's/\([a-zA-Z0-9]*\)[.]\([a-z][a-z]\)[.]\([a-zA-Z0-9]*\)/[[ \$\1 -\2 \3 ]] || exit 1/g'  -e 's/![[][[]/[[ !/' | \
   ksh93
@@ -94,7 +97,7 @@ function validate_item
   IsLocal=1   # conditions are local by default, failure means ignore item
               # if GLOB flag set, failure means cancel everything, not only current item
   Failures=0
-  for Dependency in ${Dependencies//:/ }
+  for Dependency in ${Dependencies//:/ }        # replace all occurrences of : by a space
   do
     Condition=0
     case "${Dependency#.not.}" in                                    # remove .not. if present for test
@@ -174,7 +177,8 @@ function process_item
 #      BundleName=${BundleName%.bndl}
       BundleName=${ItemShortName}
       LogFlags=""
-      set -A BundleContents $(${CMD_grep:-$(which grep)} -v '^#' $ItemName | ${CMD_xargs:-$(which xargs)})
+#      set -A BundleContents $(${CMD_grep:-$(which grep)} -v '^#' $ItemName | ${CMD_xargs:-$(which xargs)})
+      set -A BundleContents $( eval echo $( ${CMD_grep:-$(which grep)} -v '^#' $ItemName | ${CMD_xargs:-$(which xargs)} ) )
       if [[ ${BundleContents[0]} == *: ]] ; then
         #echo "condition at head of bundle: ${BundleContents[0]}" 1>&2
         if ! validate_item ${BundleContents[0]} ; then     # bundle dependencies satisfied ?
