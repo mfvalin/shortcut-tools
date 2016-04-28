@@ -1,13 +1,13 @@
 #      bash or ksh
 if [[ "$1" = -h || "$1" = --he* ]] ; then
-  echo "usage: . r.shortcut.dot [--dry-run] [-list ] [-append] [-unuse] ITEM1 ... ITEMn"
-  echo "NOTE: arguments are ORDER DEPENDENT -append is deprecated and ignored"
+  echo "usage: . r.shortcut.dot [-h|--help] [--list ] [--append] [--unuse] [--nobinbump] [--verbose] ITEM1 ... ITEMn"
+  echo "NOTES: arguments are ORDER DEPENDENT, --append is deprecated and ignored"
+  echo "Special tokens recognized: InOrder NoOrder FlushSsm Prepend Append (last 2 are ignored)"
   return
 fi
 [[ "$1" = -list || "$1" = --list ]] && shift && r.shortcuts
 unset -f ssmuse || true
-SsMuSe=`which ssmuse`
-#echo SsMuSe=$SsMuSe
+# SsMuSe=`which ssmuse`
 function is_package
 {
   typeset target
@@ -17,19 +17,19 @@ function is_package
   done
   false
 }
-function ssmuse
-{
-  ShElL=$1
-  shift
-#  echo ${SsMuSe} ${ShElL} "$@"
-  ${SsMuSe} ${ShElL} "$@"
-  unset ShElL || true
-}
-function ssmuse_domain
-{
- echo subscribing to $*
- eval "`ssmuse sh -d $*`"
-}
+# function ssmuse
+# {
+#   ShElL=$1
+#   shift
+# #  echo ${SsMuSe} ${ShElL} "$@"
+#   ${SsMuSe} ${ShElL} "$@"
+#   unset ShElL || true
+# }
+# function ssmuse_domain
+# {
+#  echo subscribing to $*
+#  eval "`ssmuse sh -d $*`"
+# }
 #
 #function ssmunuse_domain  # deprecated feature
 #{
@@ -39,37 +39,45 @@ function ssmuse_domain
 #
 StAtUs=0
 #
-if [[ "$1" = '-append' ]] ; then   shift ; fi # feature no longer supported by ssm, accepted and ignored for backward compatibility
+if [[ "$1" = '-append' || "$1" = '--append' ]] ; then   shift ; fi # feature no longer supported by ssm, accepted and ignored for backward compatibility
 #
-fonc='use'
+# fonc='use'
 add_unload=""
-if [[ "$1" = '-unuse' ]] ; then  # will now work only for gnu modules 
+if [[ "$1" = '-unuse' || "$1" = '--unuse' ]] ; then  # will now work only for gnu/lmod modules 
 #  fonc='unuse'
   add_unload="unload"
   shift
 fi
-if [[ "$2" = "-p" ]]
-then
-  echo using $3@$1 instead of $1 -p $3
-  set -- $3@$1
-fi
-echo shortcut${ENV_TEST_MODE}.dot "$@"
-#r.resolve_shortcuts "$@"
-[[ -n ${ENV_TEST_MODE} ]] && echo "WARNING: using r.resolve_shortcuts${ENV_TEST_MODE}"
 
-# get error messages and print them
-#Targets="$(s.resolve_ssm_shortcuts${ENV_TEST_MODE} $*  2>$TMPDIR/resolve_messages_$$)"
-Targets="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$)"
+NoBinBump=${NO_BIN_BUMP}
+[[ "$1" = '-nobinbump' || "$1" = '--nobinbump' ]] && NoBinBump="NoBinBump"
+# if [[ "$2" = "-p" ]]
+# then
+#   echo using $3@$1 instead of $1 -p $3
+#   set -- $3@$1
+# fi
+echo shortcut${ENV_TEST_MODE}.dot "$@"
+Targets="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs)"
+
 ${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
 ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 
 #for Target in $(r.resolve_shortcuts${ENV_TEST_MODE} "$@" )
 ModuleMode=Add
-for Target in ${Targets}
-do
-  export SSM_SHORTCUT="$Target"
+DelayedSsmuse=""
+NoOrder=""
 
-  [[ "$Target" = Prepend || "$Target" = Append ]] && continue # deprecated items, accepted for backward compatibility
+for Target in ${Targets} ; do
+
+  export SSM_SHORTCUT="$Target"   # to be used if needed in module or .sh
+
+  [[ "$Target" == Prepend || "$Target" == Append ]] && continue # deprecated items, accepted for backward compatibility
+
+  [[ "$Target" == InOrder ]] && NoOrder="" && continue       # ssmuse-sh done when non ssm element encountered
+
+  [[ "$Target" == NoOrder ]] && NoOrder="yes" && continue    # ssmuse-sh done at end
+
+  [[ "$Target" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue
 
 # resolver detected error
   if [[ "$Target" == @* ]] ; then echo ERROR: NO SHORTCUT FOUND FOR ${Target#@} ; continue ; fi
@@ -79,22 +87,35 @@ do
 
   [[ -n "${SHORTCUT_BUNDLE_PATH}" ]] && echo SHORTCUT BUNDLE PATH=${SHORTCUT_BUNDLE_PATH}
 
-# package@domain, use true_path fully qualified package (name_version_platform)
+# package@domain, use true_path for fully qualified package (name_version_platform)
   if [[ -d "${Target#*@}/etc/ssm.d" && -d "${Target#*@}/${Target%@*}" ]] ; then
      echo USING PACKAGE "(fully qualified)" ${Target%@*} from DOMAIN $(true_path ${Target#*@})
-     ssm${fonc}_domain $(true_path ${Target#*@}) -p ${Target%@*}
-    continue
+#     ssm${fonc}_domain $(true_path ${Target#*@}) -p ${Target%@*}
+     DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${Target#*@})/${Target%@*}"
+     continue
   fi
 
-# package@domain, use true_path NOT fully qualified package (name or name_version)
+# package@domain, use true_path for NOT fully qualified package (name_version)
   if [[ -d "${Target#*@}/etc/ssm.d" ]] ; then
     if  is_package ${Target#*@}/${Target%@*}_*
     then
       echo USING PACKAGE ${Target%@*} from DOMAIN $(true_path ${Target#*@})
-      ssm${fonc}_domain $(true_path ${Target#*@}) -p ${Target%@*}
+#      ssm${fonc}_domain $(true_path ${Target#*@}) -p ${Target%@*}
+      DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${Target#*@})/${Target%@*}"
       continue
     fi
   fi
+
+# domain without cache or caching is disallowed
+  if [[ -d "${Target}/etc/ssm.d" && ! ( -f "${Target}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ) ]] ; then 
+    echo USING DOMAIN `true_path $Target`
+#    ssm${fonc}_domain `true_path $Target`
+    DelayedSsmuse="${DelayedSsmuse} -d $(true_path $Target)"
+    continue
+  fi
+
+# non ssm element, process delayed ssmuse-sh unless in NoOrder mode
+  [[ -n "${DelayedSsmuse}" ]] && [[ -z ${NoOrder} ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""
 
 # domain with cache
   if [[ -f "${Target}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ]] ; then
@@ -102,9 +123,6 @@ do
       . ${Target}/cache.$BASE_ARCH
       continue
   fi
-
-# domain
-  if [[ -d "${Target}/etc/ssm.d" ]] ; then echo USING DOMAIN `true_path $Target` ; ssm${fonc}_domain `true_path $Target` ; continue ; fi
 
 # name.sh type shortcut
   if [[ "$Target" = *.sh && -r "$Target" ]] ;
@@ -116,20 +134,26 @@ do
     if [[ ${StAtUs} == "110" ]] ; then echo "WARNING: break requested by shortcut ${Target}" ; StAtUs=0 ; break ; fi
     continue ;
   fi
+
 # if we get to this point it must be a module
   if . module.dot ${add_unload:-add} ${Target} 2>&1 ; then
     echo "INFO: ${add_unload:-add} ${Target}"
     continue
   else
-    echo "ERROR: abort requested by . module.dot ${add_unload:-add} ${Target}" ; break ;
+    echo "ERROR: abort requested by . module.dot ${add_unload:-add} ${Target}" ; StAtUs=1 ; break ;
   fi
+
 # OOPS, nothing matches
   echo WARNING: NO SHORTCUT FOUND FOR ${Target}
 done
+
+# leftover delayed ssm elements
+[[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse}
+
 unset SSM_SHORTCUT || true
 # cleanup of PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
 . r.path_cleanup.dot
 
-unset -f ssmuse_domain ssmunuse_domain ssmuse || true
-unset fonc DoMaIn Target SHORTCUT_BUNDLE_PATH SSM_SHORTCUT || true
+unset -f ssmuse_domain ssmunuse_domain ssmuse is_package || true
+unset DelayedSsmuse NoBinBump fonc DoMaIn Target Targets SHORTCUT_BUNDLE_PATH SSM_SHORTCUT || true
 return ${StAtUs}

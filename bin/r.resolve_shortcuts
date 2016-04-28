@@ -148,6 +148,9 @@ function process_item
   [[ "${ItemShortName}" == StartDup ]] && NoDupMark=""    && return    # issue a warning if duplicate item found
   [[ "${ItemShortName}" == Append   ]] && return
   [[ "${ItemShortName}" == Prepend  ]] && return
+  [[ "${ItemShortName}" == FlushSsm ]] && return
+  [[ "${ItemShortName}" == NoOrder  ]] && return
+  [[ "${ItemShortName}" == InOrder  ]] && return
 
   [[ -z ${NoDupMark} ]] && \
   [[ "" != ${Constraints[${ItemShortName}]} ]] && \
