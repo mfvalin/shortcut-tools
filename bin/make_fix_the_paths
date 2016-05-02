@@ -178,6 +178,7 @@ main(int argc, char **argv)
     }
     env_var=getenv(varname);    /* get value of environment variable */
     if(env_var != NULL){        /* make sure it exists */
+      fprintf(stdout,"%s=''\n",varname);   /* set variable to '' */
       strncpy(env_value,env_var,32767); env_value[32767]='\0';  /* take a copy */
       temp=env_value;
       if(separator == '\0') {   /* if separator flagged as auto */
