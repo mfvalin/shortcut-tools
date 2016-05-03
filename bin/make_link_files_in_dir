@@ -1,5 +1,8 @@
 #!/bin/bash
-which cc 1>/dev/null 2>/dev/null || exit 1
+#which cc 1>/dev/null 2>/dev/null || exit 1
+Me=$(true_path $0)
+PATH=${PATH}:${Me%/*}/${BASE_ARCH}
+[[ "$1" != Force ]] && which link_files_in_dir >/dev/null && exit 0
 cd $TMPDIR/bin || exit 1
 [[ -x link_files_in_dir ]] && exit 0
   cat <<EOT >link_files_in_dir.c
