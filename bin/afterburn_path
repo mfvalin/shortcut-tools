@@ -6,8 +6,8 @@ if [[ "$1" == --help || "$1" == -h ]] ; then
 fi
 Where=$(true_path ${0})
 Where=${Where%/*}
-[[ -x ${TMPDIR}/bin/link_files_in_dir ]] || ${Where%/*}/bin/make_link_files_in_dir
-[[ -x ${TMPDIR}/bin/link_files_in_dir ]] || exit 1  # cannot make the needed program
+${Where%/*}/bin/make_link_files_in_dir
+which link_files_in_dir 2>/dev/null 1>/dev/null || exit 1  # could not make the needed program
 Verbose="0"
 [[ "$1" == "-v" ]]   && Verbose="1" && shift 1>&2
 [[ "$1" == "-vv" ]]  && Verbose="2" && shift 1>&2
