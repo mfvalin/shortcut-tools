@@ -67,6 +67,7 @@ ModuleMode=Add
 DelayedSsmuse=""
 DelayedMode="YES"
 which ssmuse-sh >/dev/null || DelayedMode=""
+[[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
 NoOrder=""
 
 for Target in ${Targets} ; do
