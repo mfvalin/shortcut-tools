@@ -121,7 +121,7 @@ main(int argc, char **argv)
   char *augptr[MAXAUG];   /* list of pointers to paths augmentations */
   int found[MAXAUG];
   char *sub_path[1204];   /* used to split path variables into constituent elements */
-  char extra_path[1204], env_value[32768], ovbin[1024], tmpdir_bin[1024];
+  char extra_path[1204], env_value[32768], ovbin[1024], tmpdir_bin[1024], tmpdir_ovbin[1024];
   int i, j, nsubpath, len_ovbin, augmentable;
   char separator=':';
   char *temp, *varname;
@@ -142,7 +142,8 @@ main(int argc, char **argv)
 
   tmpdir_bin[0]='\0';  /* tempdir/bin, top override */
   if(TMPDIR != NULL) snprintf(tmpdir_bin,1023,"%s/bin%c",TMPDIR,'\0'); tmpdir_bin[1023]='\0';
-
+  tmpdir_ovbin[0]='\0';
+  if(TMPDIR != NULL) snprintf(tmpdir_ovbin,1023,"%s/ovbin%c",TMPDIR,'\0'); tmpdir_ovbin[1023]='\0';
   ovbin[0]='\0';  /* base of ovbin directories, ~/ovbin */
   if(HOME   != NULL) snprintf(ovbin     ,1023,"%s/ovbin%c",HOME,'\0'); ovbin[1023]='\0';
   len_ovbin=strlen(ovbin);
@@ -210,7 +211,15 @@ main(int argc, char **argv)
       fprintf(stdout,"%s='",varname);                            /* print variable_name= */
 
       for(i=0 ; i<nsubpath ; i++){
-         if(0 == strcmp(sub_path[i],tmpdir_bin) ){               /* $TMPDIR/bin ? */
+         if(0 == strncmp(sub_path[i],tmpdir_bin,strlen(tmpdir_bin)) ){               /* $TMPDIR/bin ? */
+           fprintf(stdout,"%s%c",sub_path[i],separator);         /* print it immediately */
+           sub_path[i]=NULL;                                     /* and suppress entry */
+         }
+      }
+
+      for(i=0 ; i<nsubpath ; i++){
+         if(sub_path[i] == NULL) continue;
+         if(0 == strncmp(sub_path[i],tmpdir_ovbin,strlen(tmpdir_ovbin)) ){               /* $TMPDIR/ovbin ? */
            fprintf(stdout,"%s%c",sub_path[i],separator);         /* print it immediately */
            sub_path[i]=NULL;                                     /* and suppress entry */
          }
