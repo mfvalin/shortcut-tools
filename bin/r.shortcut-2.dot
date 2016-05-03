@@ -25,11 +25,11 @@ function is_package
 #   ${SsMuSe} ${ShElL} "$@"
 #   unset ShElL || true
 # }
-# function ssmuse_domain
-# {
-#  echo subscribing to $*
-#  eval "`ssmuse sh -d $*`"
-# }
+function ssmuse_domain
+{
+ echo subscribing to $*
+ eval "`ssmuse sh -d $*`"
+}
 #
 #function ssmunuse_domain  # deprecated feature
 #{
@@ -65,6 +65,8 @@ ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 #for Target in $(r.resolve_shortcuts${ENV_TEST_MODE} "$@" )
 ModuleMode=Add
 DelayedSsmuse=""
+DelayedMode="YES"
+which ssmuse-sh >/dev/null || DelayedMode=""
 NoOrder=""
 
 for Target in ${Targets} ; do
@@ -90,8 +92,8 @@ for Target in ${Targets} ; do
 # package@domain, use true_path for fully qualified package (name_version_platform)
   if [[ -d "${Target#*@}/etc/ssm.d" && -d "${Target#*@}/${Target%@*}" ]] ; then
      echo USING PACKAGE "(fully qualified)" ${Target%@*} from DOMAIN $(true_path ${Target#*@})
-#     ssm${fonc}_domain $(true_path ${Target#*@}) -p ${Target%@*}
-     DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${Target#*@})/${Target%@*}"
+     [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${Target#*@}) -p ${Target%@*}
+     [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${Target#*@})/${Target%@*}"
      continue
   fi
 
@@ -100,8 +102,8 @@ for Target in ${Targets} ; do
     if  is_package ${Target#*@}/${Target%@*}_*
     then
       echo USING PACKAGE ${Target%@*} from DOMAIN $(true_path ${Target#*@})
-#      ssm${fonc}_domain $(true_path ${Target#*@}) -p ${Target%@*}
-      DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${Target#*@})/${Target%@*}"
+      [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${Target#*@}) -p ${Target%@*}
+      [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${Target#*@})/${Target%@*}"
       continue
     fi
   fi
@@ -109,8 +111,8 @@ for Target in ${Targets} ; do
 # domain without cache or caching is disallowed
   if [[ -d "${Target}/etc/ssm.d" && ! ( -f "${Target}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ) ]] ; then 
     echo USING DOMAIN `true_path $Target`
-#    ssm${fonc}_domain `true_path $Target`
-    DelayedSsmuse="${DelayedSsmuse} -d $(true_path $Target)"
+    [[ -z ${DelayedMode} ]] && ssmuse_domain `true_path $Target`
+    [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -d $(true_path $Target)"
     continue
   fi
 
