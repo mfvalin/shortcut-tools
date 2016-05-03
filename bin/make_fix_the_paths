@@ -2,7 +2,7 @@
 #which cc 1>/dev/null 2>/dev/null || exit 1
 Me=$(true_path $0)
 PATH=${PATH}:${Me%/*}/${BASE_ARCH}
-[[ "$1" != Force ]] && which r.fix_the_paths >/dev/null && exit 0
+[[ "$1" != Force ]] && which r.fix_the_paths 2>/dev/null >/dev/null && exit 0
 [[ -x $TMPDIR/bin/r.fix_the_paths ]] && exit 0
 cd $TMPDIR/bin || exit 1
 [[ -x ${Me%/bin/*}/bin/r.fix_the_paths ]] && \
