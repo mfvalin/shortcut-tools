@@ -66,7 +66,7 @@ ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 ModuleMode=Add
 DelayedSsmuse=""
 DelayedMode="YES"
-which ssmuse-sh >/dev/null || DelayedMode=""
+which ssmuse-sh 2>/dev/null >/dev/null || DelayedMode=""
 [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
 NoOrder=""
 
@@ -80,7 +80,7 @@ for Target in ${Targets} ; do
 
   [[ "$Target" == NoOrder ]] && NoOrder="yes" && continue    # ssmuse-sh done at end
 
-  [[ "$Target" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue
+  [[ "$Target" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue  # ssmuse-sh done NOW
 
 # resolver detected error
   if [[ "$Target" == @* ]] ; then echo ERROR: NO SHORTCUT FOUND FOR ${Target#@} ; continue ; fi
