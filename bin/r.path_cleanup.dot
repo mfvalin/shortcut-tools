@@ -4,7 +4,7 @@
 # clean up PATH MANPATH LD_LIBRARY_PATH LD_RUN_PATH PYTHONPATH TCL_LIBRARY LIBPATH SSM_INCLUDE_PATH EC_INCLUDE_PATH EC_LD_LIBRARY_PATH`
 #
   [[ "$1" == --verbose ]] && VerboseCleanupActive="--verbose"
-  [[ -z $NoBinBump ]] && PATH=/bin:/usr/bin:/usr/local/bin:$PATH   # keep trio just below ovbin directories
+# [[ -z $NoBinBump ]] && PATH=/bin:/usr/bin:/usr/local/bin:$PATH   # keep trio just below ovbin directories
   eval $(r.fix_the_paths ${VerboseCleanupActive} +${ORDENV_PLAT}+${BASE_ARCH} PATH MANPATH LD_LIBRARY_PATH LD_RUN_PATH PYTHONPATH TCL_LIBRARY LIBPATH SSM_INCLUDE_PATH)
 #
   export MANPATH="${MANPATH}:"  # keep honoring default MANPATH
