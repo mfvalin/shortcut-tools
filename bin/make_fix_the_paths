@@ -36,6 +36,21 @@ print_usage(char *name)
    fprintf(stderr,"ex:    %s -/a/b/ -machin/patente PATH MANPATH EC_LD_LIBRARY_PATH\n",name);
 }
 
+int dir_entries(const char *path)  /* number of entries in directory. -1 directory does not exist, 0 directory is empty */
+{
+  DIR *dirp;
+  struct dirent *entry;
+  int entries = 0;
+
+  dirp = opendir(path);
+  if(dirp == NULL) { printf("error opening %s\n",path); return -1; }
+  while ( (entry = readdir(dirp)) != NULL) {
+   entries++;
+  }
+  closedir(dirp);
+  return(entries - 2);  /* account for . and .. */
+}
+
 int is_dir_element(char *base, char *subpath)   /* is subpath a subdirectory of base ? */
 {
   DIR *dirfd;
@@ -48,9 +63,12 @@ int is_dir_element(char *base, char *subpath)   /* is subpath a subdirectory of 
     while( (my_dirent = readdir(dirfd)) != NULL ) {      /* read directory entries */
       if (0 == strcmp(my_dirent->d_name,subpath) ) {     /* subpath found in directory  */
         snprintf(full_path,2047,"%s/%s",base,subpath);   /* build fullpath (used later by stat)   */
+        found = (dir_entries(full_path) > 0);            /* it is a non empty directory */
+#if defined(OBSOLETE)
         if ( 0 == stat(full_path,&stat_buf) ) {          /* name match, stat the full path */
           found = S_ISDIR(stat_buf.st_mode) ;            /* must be a directory to be considered found */
         }
+#endif
         break ;
       }
     }   /* while */
@@ -99,7 +117,7 @@ int is_a_dir(const char *base_path, const char *extra)   /* is base_path + extra
   return found ;   /* all subdirs checked, return */
 }
 
-int is_duplicate(char *what, char **table, int nentries)  /* a non existent directory is treated like a duplicate */
+int is_duplicate(char *what, char **table, int nentries)  /* a non existent or empty directory is treated like a duplicate */
 {
   int i;
   struct stat stat_buf;
@@ -110,9 +128,12 @@ int is_duplicate(char *what, char **table, int nentries)  /* a non existent dire
       if(strcmp(what,table[i]) == 0) return 1;    /* found in current list, it is a duplicate */
     }
   }
+  if (dir_entries(what) > 0) return 0 ;  /* directory exists and is not empty */
+#if defined(OBSOLETE)
   if ( 0 != stat(what,&stat_buf) ) return 1 ;  /* does not exist, act as if it were a duplicate */
   if( S_ISDIR(stat_buf.st_mode) )  return 0 ;  /* it is a directory and was not found in list */
-  return 1;
+#endif
+  return 1;   /* directory does not exist or is empty, act as if it were a duplicate */
 }
 
 #define MAXAUG 8
