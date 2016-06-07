@@ -43,7 +43,7 @@ int dir_entries(const char *path)  /* number of entries in directory. -1 directo
   int entries = 0;
 
   dirp = opendir(path);
-  if(dirp == NULL) { printf("error opening %s\n",path); return -1; }
+  if(dirp == NULL) return -1;
   while ( (entry = readdir(dirp)) != NULL) {
    entries++;
   }
