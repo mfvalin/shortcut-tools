@@ -1,7 +1,7 @@
 [[ -n "$MODULEPATH" ]] && export MODULEPATH="`eval echo $MODULEPATH`"
-export EC_SHORTCUT_PATH=/ssm/net
-[[ -n $BASH_VERSION ]] || { echo "ERROR: this is not a bash shell" ; return ; }
+export EC_SHORTCUT_PATH=${SSMUSE_BASE:-${SSM_DOMAIN_BASE}}
+[[ -n $BASH_VERSION ]] || { echo "WARNING: this is not a bash shell, auto completion not available" ; return ; }
 
-make_fix_the_paths
+#make_fix_the_paths
 
 . init_shortcuts.dot

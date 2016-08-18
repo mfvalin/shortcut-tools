@@ -5,7 +5,16 @@
 #
   [[ "$1" == --verbose ]] && VerboseCleanupActive="--verbose"
 # [[ -z $NoBinBump ]] && PATH=/bin:/usr/bin:$PATH   # keep duo just below ovbin directories
-  eval $(r.fix_the_paths ${VerboseCleanupActive} +${ORDENV_PLAT}+${BASE_ARCH} PATH MANPATH LD_LIBRARY_PATH LD_RUN_PATH PYTHONPATH TCL_LIBRARY LIBPATH SSM_INCLUDE_PATH)
+
+  [[ "${FIX_THE_PATHS:-true}" == true ]] && export FIX_THE_PATHS=$(which r.fix_the_paths 2>/dev/null)
+  [[ -z ${FIX_THE_PATHS} ]] && make_fix_the_paths
+  [[ -z ${FIX_THE_PATHS} ]] && export FIX_THE_PATHS=$(which r.fix_the_paths 2>/dev/null)
+  if [[ -z ${FIX_THE_PATHS} ]] ; then
+    echo "WARNING: r.fix_the_paths not found, cleanup/optimization disabled"
+    export FIX_THE_PATHS=true
+  fi
+
+  eval $(${FIX_THE_PATHS} ${VerboseCleanupActive} +${ORDENV_PLAT}+${BASE_ARCH} PATH MANPATH LD_LIBRARY_PATH LD_RUN_PATH PYTHONPATH TCL_LIBRARY LIBPATH SSM_INCLUDE_PATH)
 #
   export MANPATH="${MANPATH}:"  # keep honoring default MANPATH
 #
@@ -19,6 +28,6 @@
 # cleanup and expansion for EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH (used later by s.compile and consorts)
   COMP_ARCH=${COMP_ARCH:-${EC_ARCH#${BASE_ARCH}}}    # in case it is not defined
   COMP_ARCH=${COMP_ARCH#/}
-  eval $(r.fix_the_paths ${VerboseCleanupActive} +${ORDENV_PLAT}/${COMP_ARCH}+${COMP_ARCH}+${EC_ARCH} EC_INCLUDE_PATH +${ORDENV_PLAT}/${COMP_ARCH}+${COMP_ARCH}+${EC_ARCH} EC_LD_LIBRARY_PATH)
+  eval $(${FIX_THE_PATHS} ${VerboseCleanupActive} +${ORDENV_PLAT}/${COMP_ARCH}+${COMP_ARCH}+${EC_ARCH} EC_INCLUDE_PATH +${ORDENV_PLAT}/${COMP_ARCH}+${COMP_ARCH}+${EC_ARCH} EC_LD_LIBRARY_PATH)
 #
 unset VerboseCleanupActive
