@@ -146,5 +146,5 @@ then
     echo "ERROR: this is not a bash shell"
   fi
 else
-  echo "ERROR: this is not an interactive shell"
+  echo "INFO: this is not an interactive shell"
 fi
