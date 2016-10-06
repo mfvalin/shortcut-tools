@@ -191,6 +191,18 @@ main(int argc, char **argv)
         temp++ ;
         if( i == MAXAUG-1 ) break ;   /* too many augmentations */
       }
+      for( ; i>=0 ; i--){    /* get rid of duplicate augmentations */
+        if(augptr[i] != NULL){
+          for(j=i-1 ; j>=0 ; j--){
+            if(augptr[j] != NULL){
+              if(0 == strcmp(augptr[i],augptr[j])) {
+                augptr[i] = NULL; /* duplicate augmentation */
+                break;
+              }
+            }
+          }
+        }
+      }
 /*      while( i<MAXAUG ) augptr[++i] = NULL; */ /* nullify rest of table */
       argv++;
       continue;
@@ -304,5 +316,6 @@ try_next:
 }
 EOT
 #cc r.fix_the_paths.c -o r.fix_the_paths
+[[ $(which gcc) ]]  && export CC=gcc
 make r.fix_the_paths
 #rm -f r.fix_the_paths.c
