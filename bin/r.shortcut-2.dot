@@ -60,6 +60,11 @@ NoBinBump=${NO_BIN_BUMP}
 # fi
 echo shortcut${ENV_TEST_MODE}.dot "$@"
 Targets="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs) ${Targets}"   # add before remaining targets
+if((RecursionLevel>1)) ; then       # in recursive mode, do not unset variables nor undefine functions
+ ((RecursionLevel=RecursionLevel-1))
+ echo returning from level $RecursionLevel
+ return
+fi
 
 ${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
 ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
@@ -166,11 +171,11 @@ done
 unset SSM_SHORTCUT || true
 # cleanup of PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
 . r.path_cleanup.dot
-if((RecursionLevel>1)) ; then       # in recursive mode, do not unset variables nor undefine functions
- ((RecursionLevel=RecursionLevel-1))
- echo returning from level $RecursionLevel
- return
-fi
+#if((RecursionLevel>1)) ; then       # in recursive mode, do not unset variables nor undefine functions
+# ((RecursionLevel=RecursionLevel-1))
+# echo returning from level $RecursionLevel
+# return
+#fi
 
 unset -f ssmuse_domain ssmunuse_domain ssmuse is_package || true
 unset DelayedSsmuse NoBinBump fonc DoMaIn Target Targets SHORTCUT_BUNDLE_PATH SSM_SHORTCUT RecursionLevel MaxRecursionLevel ProcessedTargets || true
