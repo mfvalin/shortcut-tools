@@ -1,4 +1,6 @@
 #      bash or ksh
+((RecursionLevel > ${MaxRecursionLevel:-3})) && echo "WARNING: too many recursion levels (${RecursionLevel}>${MaxRecursionLevel})" && return
+((RecursionLevel=RecursionLevel+1))
 if [[ "$1" = -h || "$1" = --he* ]] ; then
   echo "usage: . r.shortcut.dot [-h|--help] [--list ] [--append] [--unuse] [--nobinbump] [--verbose] ITEM1 ... ITEMn"
   echo "NOTES: arguments are ORDER DEPENDENT, --append is deprecated and ignored"
@@ -57,7 +59,7 @@ NoBinBump=${NO_BIN_BUMP}
 #   set -- $3@$1
 # fi
 echo shortcut${ENV_TEST_MODE}.dot "$@"
-Targets="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs)"
+Targets="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs) ${Targets}"   # add before remaining targets
 
 ${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
 ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
@@ -70,9 +72,17 @@ which ssmuse-sh 2>/dev/null >/dev/null || DelayedMode=""
 [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
 NoOrder=""
 
-for Target in ${Targets} ; do
-
+while true
+do
+  Target=${Targets%% *} ; Target=${Target%% }      # get first target from list, flush trailing blanks
+  Targets="${Targets#* }"         # remove current target from list of targets
+  [[ -z $Target ]] && break       # nothing left, quit
+  for TeMp in ${ProcessedTargets:-NotFoundHere} ; do [[ "$TeMp" == "$Target" ]] && echo "WARNING: duplicate shortcut: '$Target'" && Target="" && break ; done
+  [[ -z $Target ]] && continue    # duplicate target, ignore it
+  ProcessedTargets="${ProcessedTargets} ${Target}"  # add to processed target list
   export SSM_SHORTCUT="$Target"   # to be used if needed in module or .sh
+
+  [[ "$Target" == Recur=* ]] && ((MaxRecursionLevel=${Target#*=})) && continue # max recursion depth control (default is 3)
 
   [[ "$Target" == Prepend || "$Target" == Append ]] && continue # deprecated items, accepted for backward compatibility
 
@@ -156,7 +166,12 @@ done
 unset SSM_SHORTCUT || true
 # cleanup of PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
 . r.path_cleanup.dot
+if((RecursionLevel>1)) ; then       # in recursive mode, do not unset variables nor undefine functions
+ ((RecursionLevel=RecursionLevel-1))
+ echo returning from level $RecursionLevel
+ return
+fi
 
 unset -f ssmuse_domain ssmunuse_domain ssmuse is_package || true
-unset DelayedSsmuse NoBinBump fonc DoMaIn Target Targets SHORTCUT_BUNDLE_PATH SSM_SHORTCUT || true
+unset DelayedSsmuse NoBinBump fonc DoMaIn Target Targets SHORTCUT_BUNDLE_PATH SSM_SHORTCUT RecursionLevel MaxRecursionLevel ProcessedTargets || true
 return ${StAtUs}

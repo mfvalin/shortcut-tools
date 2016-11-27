@@ -151,6 +151,7 @@ function process_item
   [[ "${ItemShortName}" == FlushSsm ]] && return
   [[ "${ItemShortName}" == NoOrder  ]] && return
   [[ "${ItemShortName}" == InOrder  ]] && return
+  [[ "${ItemShortName}" == Recur=[1-9]  ]] && ProcessedItems="${ProcessedItems} ${ItemShortName}" && return
 
   [[ -z ${NoDupMark} ]] && \
   [[ "" != ${Constraints[${ItemShortName}]} ]] && \
