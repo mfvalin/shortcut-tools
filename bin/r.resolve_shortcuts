@@ -7,14 +7,14 @@
 function is_shortcut
 {
   typeset Prefix
-  [[ -d ${1}/etc/ssm.d ]] && echo  ${1} && return 0  # path or soft link to a domain
+  [[ -d ${1}/etc/ssm.d/installed ]] && echo  ${1} && return 0  # path or soft link to a domain
   for Prefix in ${Prefixes}
   do
     [[ -r ${Prefix}/${1}.bndl       ]]      \
                                        && echo ${Prefix}/${1}.bndl && return 0   # bundle
     [[ -r ${Prefix}/${1}.sh         ]]      \
                                        && echo ${Prefix}/${1}.sh   && return 0   # sh type shortcut
-    [[ -d ${Prefix}/${1}/etc/ssm.d  ]]      \
+    [[ -d ${Prefix}/${1}/etc/ssm.d/installed  ]]      \
                                        && echo ${Prefix}/${1}      && return 0   # link to domain
     [[ -f ${Prefix}/${1}/.version ]]        \
                                        && echo ${1}      && return 0   # gnu module
@@ -29,7 +29,7 @@ function is_package
   typeset target
   for target in $*
   do
-    [[ -d ${target}/../etc/ssm.d ]] && return 0  # package@domain (fully qualified or not)
+    [[ -d ${target}/../etc/ssm.d/installed ]] && return 0  # package@domain (fully qualified or not)
   done
   return 1  # nothing appropriate found
 }
@@ -37,14 +37,16 @@ function is_package
 function is_package_in_domain
 {
   typeset Prefix
-  if [[ "$1" = *@* && -d ${1#*@}/etc/ssm.d ]]
+  is_package $1 && echo ${1##*/}@${1%/*} && return 0 
+  if [[ "$1" = *@* && -d ${1#*@}/etc/ssm.d/installed ]]
   then
     [[ -d ${1#*@}/${1%@*} ]]     && echo ${1} && return 0
     is_package ${1#*@}/${1%@*}_* && echo ${1}  && return 0
   fi
   for Prefix in ${Prefixes}
   do
-    if [[ "$1" = *@* && -d $Prefix/${1#*@}/etc/ssm.d ]]
+    is_package $Prefix/$1 && echo ${1##*/}@${Prefix}/${1%/*} && return 0 
+    if [[ "$1" = *@* && -d $Prefix/${1#*@}/etc/ssm.d/installed ]]
     then
       [[ -d $Prefix/${1#*@}/${1%@*} ]]     && echo ${1%@*}@${Prefix}/${1#*@} && return 0
       is_package $Prefix/${1#*@}/${1%@*}_* && echo ${1%@*}@${Prefix}/${1#*@} && return 0
@@ -152,7 +154,6 @@ function process_item
   [[ "${ItemShortName}" == NoOrder  ]] && return
   [[ "${ItemShortName}" == InOrder  ]] && return
   [[ "${ItemShortName}" == Recur=[1-9]       ]] && ProcessedItems="${ProcessedItems} ${ItemShortName}" && return
-#  [[ "${ItemShortName}" == Recur=[1-9][0-9]  ]] && ProcessedItems="${ProcessedItems} ${ItemShortName}" && return
 
   [[ -z ${NoDupMark} ]] && \
   [[ "" != ${Constraints[${ItemShortName}]} ]] && \
@@ -208,7 +209,7 @@ function process_item
       ProcessedItems="${ProcessedItems} $ItemName"
       [[ -f "${ItemName%.sh}.dep" ]] && GlobalDep="${GlobalDep}:$(${CMD_cat:-$(which cat)} ${ItemName%.sh}.dep)"
     fi
-  else  # must be package@domain or it is an error
+  else  # must be package in domain or it is an error (package@domain or /path/to/package)
     ItemName=`is_package_in_domain ${1##*:}`
     if [[ -n ${ItemName} ]]
     then

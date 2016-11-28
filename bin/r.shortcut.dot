@@ -3,6 +3,6 @@
 
 #ENV_TEST_MODE='-alpha'
 [[ -z $CMD_sed ]] && eval $(afterburn_commands --export sed xargs cat grep rm)
-[[ -f $TMPDIR/bin/true_path ]] || ln -s `which true_path` $TMPDIR/bin/true_path
-[[ -f $TMPDIR/bin/r.shortcut-cfg ]] || ln -s `which r.shortcut-cfg` $TMPDIR/bin/r.shortcut-cfg
+[[ -f $TMPDIR/bin/true_path ]] || ln -sf `which true_path` $TMPDIR/bin/true_path
+[[ -f $TMPDIR/bin/r.shortcut-cfg ]] || ln -sf `which r.shortcut-cfg` $TMPDIR/bin/r.shortcut-cfg
 . r.shortcut-2.dot 2>/dev/null

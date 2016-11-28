@@ -138,10 +138,6 @@ then
     complete -F _r.shortcut_comp r.shortcut
     alias r.load=r.shortcut
     complete -F _r.shortcut_comp r.load
-#    unset -f rload
-#    rload() { . r.shortcut.dot $@ ; }
-#    export -f rload
-#    complete -o nospace -F _r.shortcut_comp rload
     complete -o nospace -F _DottableCompletion .
     complete -o nospace -F _DottableCompletion source
 #    complete -o nospace -F _ExecutableCompletion which

@@ -171,12 +171,7 @@ done
 unset SSM_SHORTCUT || true
 # cleanup of PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
 . r.path_cleanup.dot
-#if((RecursionLevel>1)) ; then       # in recursive mode, do not unset variables nor undefine functions
-# ((RecursionLevel=RecursionLevel-1))
-# echo returning from level $RecursionLevel
-# return
-#fi
 
 unset -f ssmuse_domain ssmunuse_domain ssmuse is_package || true
-unset DelayedSsmuse NoBinBump fonc DoMaIn Target Targets SHORTCUT_BUNDLE_PATH SSM_SHORTCUT RecursionLevel MaxRecursionLevel ProcessedTargets || true
+unset DelayedSsmuse NoBinBump fonc DoMaIn Target Targets SHORTCUT_BUNDLE_PATH SSM_SHORTCUT RecursionLevel MaxRecursionLevel ProcessedTargets TeMp || true
 return ${StAtUs}

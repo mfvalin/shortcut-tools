@@ -22,6 +22,7 @@ cat <<"EOT" >r.fix_the_paths.c
 
 static  char **eliminate=NULL;
 static  int n_eliminate=0;
+static  char extra_path[1204], env_value[32768], ovbin[1024], tmpdir_bin[1024], tmpdir_ovbin[1024];
 
 print_usage(char *name)
 {
@@ -46,6 +47,7 @@ int dir_entries(const char *path)  /* number of entries in directory. -1 directo
   if(dirp == NULL) return -1;
   while ( (entry = readdir(dirp)) != NULL) {
    entries++;
+   if(entries >= 3) break ;    /* in this program we only want to know if directory has at least one entry other thatn . and .. */
   }
   closedir(dirp);
   return(entries - 2);  /* account for . and .. */
@@ -128,6 +130,8 @@ int is_duplicate(char *what, char **table, int nentries)  /* a non existent or e
       if(strcmp(what,table[i]) == 0) return 1;    /* found in current list, it is a duplicate */
     }
   }
+  /* override directories (~/ovbin , $TMPDIR/bin, $TMPDIR/ovbin) are kept even if empty or non existent */
+  if( (0 == strncmp(what,tmpdir_bin,strlen(tmpdir_bin))) ||  (0 == strncmp(what,tmpdir_ovbin,strlen(tmpdir_ovbin))) || (0 == strncmp(what,ovbin,strlen(ovbin))) ) return 0 ;
   if (dir_entries(what) > 0) return 0 ;  /* directory exists and is not empty */
 #if defined(OBSOLETE)
   if ( 0 != stat(what,&stat_buf) ) return 1 ;  /* does not exist, act as if it were a duplicate */
@@ -144,7 +148,6 @@ main(int argc, char **argv)
   char *augptr[MAXAUG];   /* list of pointers to paths augmentations */
   int found[MAXAUG];
   char *sub_path[1204];   /* used to split path variables into constituent elements */
-  char extra_path[1204], env_value[32768], ovbin[1024], tmpdir_bin[1024], tmpdir_ovbin[1024];
   int i, j, nsubpath, len_ovbin, augmentable;
   char separator=':';
   char *temp, *varname;
@@ -245,13 +248,14 @@ main(int argc, char **argv)
 
       fprintf(stdout,"%s='",varname);                            /* print variable_name= */
 
+      /* OVERRIDE directories (non augmentable) */
       for(i=0 ; i<nsubpath ; i++){
          if(0 == strncmp(sub_path[i],tmpdir_bin,strlen(tmpdir_bin)) ){               /* $TMPDIR/bin ? */
            fprintf(stdout,"%s%c",sub_path[i],separator);         /* print it immediately */
            sub_path[i]=NULL;                                     /* and suppress entry */
          }
       }
-
+      while(sub_path[nsubpath-1] == NULL) nsubpath--;            /* suppress NULLs at tail of list */
       for(i=0 ; i<nsubpath ; i++){
          if(sub_path[i] == NULL) continue;
          if(0 == strncmp(sub_path[i],tmpdir_ovbin,strlen(tmpdir_ovbin)) ){               /* $TMPDIR/ovbin ? */
@@ -268,6 +272,7 @@ main(int argc, char **argv)
          }
       }
       while(sub_path[nsubpath-1] == NULL) nsubpath--;            /* suppress NULLs at tail of list */
+
       for(i=0 ; i<nsubpath ; i++) {                              /* output non override values */
         augmentable = 1;
         if(sub_path[i] != NULL) {
