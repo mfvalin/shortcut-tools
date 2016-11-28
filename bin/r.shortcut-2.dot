@@ -1,4 +1,5 @@
 #      bash or ksh
+[[ -z $RecursionLevel ]] && unset TaRgEts
 ((RecursionLevel > ${MaxRecursionLevel:-3})) && echo "WARNING: too many recursion levels (${RecursionLevel}>${MaxRecursionLevel})" && return
 ((RecursionLevel=RecursionLevel+1))
 if [[ "$1" = -h || "$1" = --he* ]] ; then
@@ -59,7 +60,7 @@ NoBinBump=${NO_BIN_BUMP}
 #   set -- $3@$1
 # fi
 echo shortcut${ENV_TEST_MODE}.dot "$@"
-Targets="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs) ${Targets}"   # add before remaining targets
+TaRgEts="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs) ${TaRgEts} "   # add before remaining targets
 if((RecursionLevel>1)) ; then       # in recursive mode, do not unset variables nor undefine functions
  ((RecursionLevel=RecursionLevel-1))
  echo returning from level $RecursionLevel
@@ -69,7 +70,7 @@ fi
 ${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
 ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 
-#for Target in $(r.resolve_shortcuts${ENV_TEST_MODE} "$@" )
+#for TaRgEt in $(r.resolve_shortcuts${ENV_TEST_MODE} "$@" )
 ModuleMode=Add
 DelayedSsmuse=""
 DelayedMode="YES"
@@ -79,56 +80,56 @@ NoOrder=""
 
 while true
 do
-  Target=${Targets%% *} ; Target=${Target%% }      # get first target from list, flush trailing blanks
-  Targets="${Targets#* }"         # remove current target from list of targets
-  [[ -z $Target ]] && break       # nothing left, quit
-  for TeMp in ${ProcessedTargets:-NotFoundHere} ; do [[ "$TeMp" == "$Target" ]] && echo "WARNING: duplicate shortcut: '$Target'" && Target="" && break ; done
-  [[ -z $Target ]] && continue    # duplicate target, ignore it
-  ProcessedTargets="${ProcessedTargets} ${Target}"  # add to processed target list
-  export SSM_SHORTCUT="$Target"   # to be used if needed in module or .sh
+  TaRgEt=${TaRgEts%% *} ; TaRgEt=${TaRgEt%% }      # get first target from list, flush trailing blanks
+  TaRgEts="${TaRgEts#* }"         # remove current target from list of targets
+  [[ -z $TaRgEt ]] && break       # nothing left, quit
+  for TeMp in ${ProcessedTaRgEts:-NotFoundHere} ; do [[ "$TeMp" == "$TaRgEt" ]] && echo "WARNING: duplicate shortcut: '$TaRgEt'" && TaRgEt="" && break ; done
+  [[ -z $TaRgEt ]] && continue    # duplicate target, ignore it
+  ProcessedTaRgEts="${ProcessedTaRgEts} ${TaRgEt}"  # add to processed target list
+  export SSM_SHORTCUT="$TaRgEt"   # to be used if needed in module or .sh
 
-  [[ "$Target" == Recur=* ]] && ((MaxRecursionLevel=${Target#*=})) && continue # max recursion depth control (default is 3)
+  [[ "$TaRgEt" == Recur=* ]] && ((MaxRecursionLevel=${TaRgEt#*=})) && continue # max recursion depth control (default is 3)
 
-  [[ "$Target" == Prepend || "$Target" == Append ]] && continue # deprecated items, accepted for backward compatibility
+  [[ "$TaRgEt" == Prepend || "$TaRgEt" == Append ]] && continue # deprecated items, accepted for backward compatibility
 
-  [[ "$Target" == InOrder ]] && NoOrder="" && continue       # ssmuse-sh done when non ssm element encountered
+  [[ "$TaRgEt" == InOrder ]] && NoOrder="" && continue       # ssmuse-sh done when non ssm element encountered
 
-  [[ "$Target" == NoOrder ]] && NoOrder="yes" && continue    # ssmuse-sh done at end
+  [[ "$TaRgEt" == NoOrder ]] && NoOrder="yes" && continue    # ssmuse-sh done at end
 
-  [[ "$Target" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue  # ssmuse-sh done NOW
+  [[ "$TaRgEt" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue  # ssmuse-sh done NOW
 
 # resolver detected error
-  if [[ "$Target" == @* ]] ; then echo ERROR: NO SHORTCUT FOUND FOR ${Target#@} ; continue ; fi
+  if [[ "$TaRgEt" == @* ]] ; then echo ERROR: NO SHORTCUT FOUND FOR ${TaRgEt#@} ; continue ; fi
 
 # resolver marker for start/end of bundle, used to set/unset SHORTCUT_BUNDLE_PATH
-  if [[ "$Target" == ++* ]] ; then export SHORTCUT_BUNDLE_PATH="${Target#++@}" ; continue ; fi
+  if [[ "$TaRgEt" == ++* ]] ; then export SHORTCUT_BUNDLE_PATH="${TaRgEt#++@}" ; continue ; fi
 
   [[ -n "${SHORTCUT_BUNDLE_PATH}" ]] && echo SHORTCUT BUNDLE PATH=${SHORTCUT_BUNDLE_PATH}
 
 # package@domain, use true_path for fully qualified package (name_version_platform)
-  if [[ -d "${Target#*@}/etc/ssm.d" && -d "${Target#*@}/${Target%@*}" ]] ; then
-     echo USING PACKAGE "(fully qualified)" ${Target%@*} from DOMAIN $(true_path ${Target#*@})
-     [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${Target#*@}) -p ${Target%@*}
-     [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${Target#*@})/${Target%@*}"
+  if [[ -d "${TaRgEt#*@}/etc/ssm.d" && -d "${TaRgEt#*@}/${TaRgEt%@*}" ]] ; then
+     echo USING PACKAGE "(fully qualified)" ${TaRgEt%@*} from DOMAIN $(true_path ${TaRgEt#*@})
+     [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${TaRgEt#*@}) -p ${TaRgEt%@*}
+     [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${TaRgEt#*@})/${TaRgEt%@*}"
      continue
   fi
 
 # package@domain, use true_path for NOT fully qualified package (name_version)
-  if [[ -d "${Target#*@}/etc/ssm.d" ]] ; then
-    if  is_package ${Target#*@}/${Target%@*}_*
+  if [[ -d "${TaRgEt#*@}/etc/ssm.d" ]] ; then
+    if  is_package ${TaRgEt#*@}/${TaRgEt%@*}_*
     then
-      echo USING PACKAGE ${Target%@*} from DOMAIN $(true_path ${Target#*@})
-      [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${Target#*@}) -p ${Target%@*}
-      [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${Target#*@})/${Target%@*}"
+      echo USING PACKAGE ${TaRgEt%@*} from DOMAIN $(true_path ${TaRgEt#*@})
+      [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${TaRgEt#*@}) -p ${TaRgEt%@*}
+      [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${TaRgEt#*@})/${TaRgEt%@*}"
       continue
     fi
   fi
 
 # domain without cache or caching is disallowed
-  if [[ -d "${Target}/etc/ssm.d" && ! ( -f "${Target}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ) ]] ; then 
-    echo USING DOMAIN `true_path $Target`
-    [[ -z ${DelayedMode} ]] && ssmuse_domain `true_path $Target`
-    [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -d $(true_path $Target)"
+  if [[ -d "${TaRgEt}/etc/ssm.d" && ! ( -f "${TaRgEt}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ) ]] ; then 
+    echo USING DOMAIN `true_path $TaRgEt`
+    [[ -z ${DelayedMode} ]] && ssmuse_domain `true_path $TaRgEt`
+    [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -d $(true_path $TaRgEt)"
     continue
   fi
 
@@ -136,33 +137,33 @@ do
   [[ -n "${DelayedSsmuse}" ]] && [[ -z ${NoOrder} ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""
 
 # domain with cache
-  if [[ -f "${Target}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ]] ; then
-      echo USING cache for DOMAIN `true_path $Target`
-      . ${Target}/cache.$BASE_ARCH
+  if [[ -f "${TaRgEt}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ]] ; then
+      echo USING cache for DOMAIN `true_path $TaRgEt`
+      . ${TaRgEt}/cache.$BASE_ARCH
       continue
   fi
 
 # name.sh type shortcut
-  if [[ "$Target" = *.sh && -r "$Target" ]] ;
+  if [[ "$TaRgEt" = *.sh && -r "$TaRgEt" ]] ;
   then 
-    echo USING SHORTCUT $Target ;
-    . $Target ;
+    echo USING SHORTCUT $TaRgEt ;
+    . $TaRgEt ;
     StAtUs_T=$? ; if [[ ${StAtUs_T} != 0 ]] ; then StAtUs=${StAtUs_T} ; fi
-    if [[ ${StAtUs} == "111" ]] ; then echo "ERROR: abort requested by shortcut ${Target}" ; break ; fi
-    if [[ ${StAtUs} == "110" ]] ; then echo "WARNING: break requested by shortcut ${Target}" ; StAtUs=0 ; break ; fi
+    if [[ ${StAtUs} == "111" ]] ; then echo "ERROR: abort requested by shortcut ${TaRgEt}" ; break ; fi
+    if [[ ${StAtUs} == "110" ]] ; then echo "WARNING: break requested by shortcut ${TaRgEt}" ; StAtUs=0 ; break ; fi
     continue ;
   fi
 
 # if we get to this point it must be a module
-  if . module.dot ${add_unload:-add} ${Target} 2>&1 ; then
-    echo "INFO: ${add_unload:-add} ${Target}"
+  if . module.dot ${add_unload:-add} ${TaRgEt} 2>&1 ; then
+    echo "INFO: ${add_unload:-add} ${TaRgEt}"
     continue
   else
-    echo "ERROR: abort requested by . module.dot ${add_unload:-add} ${Target}" ; StAtUs=1 ; break ;
+    echo "ERROR: abort requested by . module.dot ${add_unload:-add} ${TaRgEt}" ; StAtUs=1 ; break ;
   fi
 
 # OOPS, nothing matches
-  echo WARNING: NO SHORTCUT FOUND FOR ${Target}
+  echo WARNING: NO SHORTCUT FOUND FOR ${TaRgEt}
 done
 
 # leftover delayed ssm elements
@@ -173,5 +174,5 @@ unset SSM_SHORTCUT || true
 . r.path_cleanup.dot
 
 unset -f ssmuse_domain ssmunuse_domain ssmuse is_package || true
-unset DelayedSsmuse NoBinBump fonc DoMaIn Target Targets SHORTCUT_BUNDLE_PATH SSM_SHORTCUT RecursionLevel MaxRecursionLevel ProcessedTargets TeMp || true
+unset DelayedSsmuse NoBinBump fonc DoMaIn TaRgEt TaRgEts SHORTCUT_BUNDLE_PATH SSM_SHORTCUT RecursionLevel MaxRecursionLevel ProcessedTaRgEts TeMp || true
 return ${StAtUs}
