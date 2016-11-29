@@ -1,0 +1,169 @@
+#
+#  for bash or ksh[93] or compatible sh family shell
+#
+if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize some internal variables
+  unset TargetsV01
+  StAtUs=0
+  ModuleMode=Add
+  DelayedSsmuse=""
+  DelayedMode="YES"
+  which ssmuse-sh 2>/dev/null >/dev/null || DelayedMode=""
+  [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
+  NoOrder=""
+fi
+#
+((RecursionLevel > ${MaxRecursionLevel:-3})) && echo "WARNING: too many recursion levels (${RecursionLevel}>${MaxRecursionLevel})" && return
+((RecursionLevel=RecursionLevel+1))
+#
+if [[ "$1" = -h || "$1" = --he* ]] ; then
+  echo "usage: . r.load.dot [-h|--help] [--list ] [--append] [--unuse] [--nobinbump] [--verbose] ITEM1 ... ITEMn"
+  echo "NOTES: arguments are ORDER DEPENDENT, --append is deprecated and ignored"
+  echo "Special tokens recognized: InOrder NoOrder FlushSsm Recur=n Prepend Append (last 2 are silently ignored)"
+  return
+fi
+[[ "$1" = -list || "$1" = --list ]] && shift && r.shortcuts
+unset -f ssmuse || true  # in case there is a function called ssmuse (old setup)
+#
+function is_package
+{
+#  typeset target
+#  for target in $*
+#  do
+#    [[ -d ${target}/../etc/ssm.d/installed ]] && return
+#  done
+  [[ -d ${1}/../etc/ssm.d/installed ]] && return
+  false
+}
+function ssmuse_domain   # old call to ssmuse (only if ssmuse-sh not found)
+{
+  echo "INFO: subscribing to $*"
+  eval "`ssmuse sh -d $*`"
+}
+#
+#
+if [[ "$1" = '-append' || "$1" = '--append' ]] ; then   shift ; fi # feature no longer supported by ssm, accepted and ignored for backward compatibility
+#
+add_unload=""
+if [[ "$1" = '-unuse' || "$1" = '--unuse' ]] ; then  # will now work only for gnu/lmod modules 
+  add_unload="unload"
+  shift
+fi
+
+NoBinBump=${NO_BIN_BUMP}
+[[ "$1" = '-nobinbump' || "$1" = '--nobinbump' ]] && NoBinBump="NoBinBump"
+#
+echo "INFO: shortcut${ENV_TEST_MODE}.dot $@"
+#
+TargetsV01="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs) ${TargetsV01} "   # add before remaining targets
+if((RecursionLevel>1)) ; then       # in recursive mode, job done, do not unset variables nor undefine functions
+ ((RecursionLevel=RecursionLevel-1))
+ echo "INFO: returning from level $RecursionLevel"
+ return
+fi
+
+${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
+${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
+
+while true
+do
+  TargetV01=${TargetsV01%% *} ; TargetV01=${TargetV01%% }      # get first target from list, flush trailing blanks
+  TargetsV01="${TargetsV01#* }"         # remove current target from list of targets
+  [[ -z $TargetV01 ]] && break       # nothing left, quit
+  for TeMp in ${ProcessedTargetsV01:-NotFoundHere} ; do [[ "$TeMp" == "$TargetV01" ]] && echo "WARNING: duplicate shortcut: '$TargetV01'" && TargetV01="" && break ; done
+  [[ -z $TargetV01 ]] && continue    # duplicate target, ignore it
+  ProcessedTargetsV01="${ProcessedTargetsV01} ${TargetV01}"  # add to processed target list
+  export SSM_SHORTCUT="$TargetV01"   # to be used if needed in module or .sh
+
+# set recursion max depth
+  [[ "$TargetV01" == Recur=* ]] && ((MaxRecursionLevel=${TargetV01#*=})) && continue # max recursion depth control (default is 3)
+
+# prepend/append mode (deprecated)
+  [[ "$TargetV01" == Prepend || "$TargetV01" == Append ]] && continue # deprecated items, accepted for backward compatibility
+
+# force shortcuts to be performed in strict order
+  [[ "$TargetV01" == InOrder ]] && NoOrder="" && continue       # ssmuse-sh done when non ssm element encountered
+
+# no strict order, perform all ssmuse commands at end
+  [[ "$TargetV01" == NoOrder ]] && NoOrder="yes" && continue    # ssmuse-sh done at end
+
+# accumulated ssmuse commands performed immediately
+  [[ "$TargetV01" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue  # ssmuse-sh done NOW
+
+# resolver detected error
+  if [[ "$TargetV01" == @* ]] ; then echo "WARNING: NO SHORTCUT FOUND FOR ${TargetV01#@}" ; continue ; fi
+
+# resolver marker for start/end of bundle, used to set/unset SHORTCUT_BUNDLE_PATH
+  if [[ "$TargetV01" == ++* ]] ; then export SHORTCUT_BUNDLE_PATH="${TargetV01#++@}" ; continue ; fi
+
+  [[ -n "${SHORTCUT_BUNDLE_PATH}" ]] && echo "INFO: SHORTCUT BUNDLE PATH=${SHORTCUT_BUNDLE_PATH}"
+
+# package@domain, use true_path for fully qualified package (name_version_platform)
+  if [[ -d "${TargetV01#*@}/etc/ssm.d/installed" && -d "${TargetV01#*@}/${TargetV01%@*}" ]] ; then
+     echo "INFO: USING PACKAGE "(fully qualified)" ${TargetV01%@*} from DOMAIN $(true_path ${TargetV01#*@})"
+     [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${TargetV01#*@}) -p ${TargetV01%@*}
+     [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${TargetV01#*@})/${TargetV01%@*}"
+     continue
+  fi
+
+# package@domain, use true_path for NOT fully qualified package (name_version)
+  if [[ -d "${TargetV01#*@}/etc/ssm.d/installed" ]] ; then
+    if  is_package ${TargetV01#*@}/${TargetV01%@*}_* ; then
+      echo "INFO: USING PACKAGE ${TargetV01%@*} from DOMAIN $(true_path ${TargetV01#*@})"
+      [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${TargetV01#*@}) -p ${TargetV01%@*}
+      [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${TargetV01#*@})/${TargetV01%@*}"
+      continue
+    fi
+  fi
+
+# domain without cache or caching is disallowed
+  if [[ -d "${TargetV01}/etc/ssm.d/installed" && ! ( -f "${TargetV01}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ) ]] ; then 
+    echo "INFO: USING DOMAIN `true_path $TargetV01`"
+    [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path $TargetV01)
+    [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -d $(true_path $TargetV01)"
+    continue
+  fi
+
+# non ssm element, process delayed ssmuse-sh unless in NoOrder mode
+  [[ -n "${DelayedSsmuse}" ]] && [[ -z ${NoOrder} ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""
+
+# domain with cache and caching is permitted
+  if [[ -f "${TargetV01}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ]] ; then
+    echo "INFO: USING cache for DOMAIN `true_path $TargetV01`"
+    source ${TargetV01}/cache.$BASE_ARCH
+    continue
+  fi
+
+# name.sh type shortcut
+  if [[ "$TargetV01" = *.sh && -r "$TargetV01" ]] ; then
+    echo "INFO: USING SHORTCUT $TargetV01" ;
+    source $TargetV01 ;
+    StAtUs_T=$? ; if [[ ${StAtUs_T} != 0 ]] ; then StAtUs=${StAtUs_T} ; fi
+    if [[ ${StAtUs} == "111" ]] ; then echo "ERROR: abort requested by shortcut ${TargetV01}" ; break ; fi
+    if [[ ${StAtUs} == "110" ]] ; then echo "WARNING: break requested by shortcut ${TargetV01}" ; StAtUs=0 ; break ; fi
+    continue ;
+  fi
+
+# if we get to this point it must be a module
+  if source module.dot ${add_unload:-add} ${TargetV01} 2>&1 ; then
+    echo "INFO: ${add_unload:-add} ${TargetV01}"
+    continue
+  else
+    echo "ERROR: abort requested by . module.dot ${add_unload:-add} ${TargetV01}" ; StAtUs=1 ; break ;
+  fi
+
+# OOPS, nothing matches
+  echo "WARNING: NO SHORTCUT FOUND FOR ${TargetV01}"
+done
+
+# leftover delayed elements for ssmuse-sh
+[[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse}
+
+unset SSM_SHORTCUT || true
+#
+# cleanup of various PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
+source r.path_cleanup.dot
+#
+# final cleanup, get rid of internally defined variables and functions
+unset -f ssmuse_domain ssmunuse_domain ssmuse is_package || true
+unset DelayedSsmuse DelayedMode NoBinBump fonc DoMaIn TargetV01 TargetsV01 SHORTCUT_BUNDLE_PATH SSM_SHORTCUT RecursionLevel MaxRecursionLevel ProcessedTargetsV01 TeMp || true
+return ${StAtUs}
