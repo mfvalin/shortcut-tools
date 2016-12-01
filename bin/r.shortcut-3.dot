@@ -10,7 +10,19 @@ if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize some intern
   which ssmuse-sh 2>/dev/null >/dev/null || DelayedMode=""
   [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
   NoOrder=""
-fi
+#
+  function is_package
+  {
+    [[ -d ${1}/../etc/ssm.d/installed ]] && return
+    false
+  }
+  function ssmuse_domain   # old call to ssmuse (only if ssmuse-sh not found)
+  {
+    echo "INFO: subscribing to $*"
+    eval "`ssmuse sh -d $*`"
+  }
+#
+fi   # top level instance
 #
 ((RecursionLevel > ${MaxRecursionLevel:-3})) && echo "WARNING: too many recursion levels (${RecursionLevel}>${MaxRecursionLevel})" && return
 ((RecursionLevel=RecursionLevel+1))
@@ -23,23 +35,6 @@ if [[ "$1" = -h || "$1" = --he* ]] ; then
 fi
 [[ "$1" = -list || "$1" = --list ]] && shift && r.shortcuts
 unset -f ssmuse || true  # in case there is a function called ssmuse (old setup)
-#
-function is_package
-{
-#  typeset target
-#  for target in $*
-#  do
-#    [[ -d ${target}/../etc/ssm.d/installed ]] && return
-#  done
-  [[ -d ${1}/../etc/ssm.d/installed ]] && return
-  false
-}
-function ssmuse_domain   # old call to ssmuse (only if ssmuse-sh not found)
-{
-  echo "INFO: subscribing to $*"
-  eval "`ssmuse sh -d $*`"
-}
-#
 #
 if [[ "$1" = '-append' || "$1" = '--append' ]] ; then   shift ; fi # feature no longer supported by ssm, accepted and ignored for backward compatibility
 #
@@ -55,16 +50,16 @@ NoBinBump=${NO_BIN_BUMP}
 echo "INFO: shortcut${ENV_TEST_MODE}.dot $@"
 #
 TargetsV01="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs) ${TargetsV01} "   # add before remaining targets
-if((RecursionLevel>1)) ; then       # in recursive mode, job done, do not unset variables nor undefine functions
+${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
+${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
+#
+if((RecursionLevel>1)) ; then       # in recursive mode, job done, do not unset variables nor undefine functions before returning to caller
  ((RecursionLevel=RecursionLevel-1))
  echo "INFO: returning from level $RecursionLevel"
  return
 fi
-
-${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
-${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
-
-while true
+#
+while true   # loop until no target left
 do
   TargetV01=${TargetsV01%% *} ; TargetV01=${TargetV01%% }      # get first target from list, flush trailing blanks
   TargetsV01="${TargetsV01#* }"         # remove current target from list of targets
@@ -74,7 +69,7 @@ do
   ProcessedTargetsV01="${ProcessedTargetsV01} ${TargetV01}"  # add to processed target list
   export SSM_SHORTCUT="$TargetV01"   # to be used if needed in module or .sh
 
-# set recursion max depth
+# set maximum recursion depth (default is 3 for this version)
   [[ "$TargetV01" == Recur=* ]] && ((MaxRecursionLevel=${TargetV01#*=})) && continue # max recursion depth control (default is 3)
 
 # prepend/append mode (deprecated)
@@ -143,7 +138,7 @@ do
     continue ;
   fi
 
-# if we get to this point it must be a module
+# if we get to this point it must be a module (an error in module processing is considered fatal)
   if source module.dot ${add_unload:-add} ${TargetV01} 2>&1 ; then
     echo "INFO: ${add_unload:-add} ${TargetV01}"
     continue
@@ -155,10 +150,8 @@ do
   echo "WARNING: NO SHORTCUT FOUND FOR ${TargetV01}"
 done
 
-# leftover delayed elements for ssmuse-sh
+# apply leftover delayed elements for ssmuse-sh
 [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse}
-
-unset SSM_SHORTCUT || true
 #
 # cleanup of various PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
 source r.path_cleanup.dot
