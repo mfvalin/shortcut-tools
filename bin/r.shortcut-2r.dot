@@ -1,35 +1,38 @@
 #
 #  for bash or ksh[93] or compatible sh family shell
 #
-if [[ "$1" = -h || "$1" = --he* ]] ; then
-  echo "usage: . r.load.dot [-h|--help] [--list ] [--append] [--unuse] [--nobinbump] [--reset] ITEM1 ... ITEMn"
-  echo "NOTES: arguments are ORDER DEPENDENT, --append is deprecated and ignored"
+function usage
+{
+  echo "usage: . r.load.dot [-h|--help] [--list ] [--append] [--unuse] [--use] [--nobinbump] [--level1] [--] ITEM1 ... ITEMn"
+  echo "NOTES: - and -- options are ORDER INDEPENDENT, --append is deprecated and ignored"
+  echo "       options MUST appear BEFORE items"
+  echo "       anything after -- is considered to be an item"
   echo "Special tokens recognized: InOrder NoOrder FlushSsm Recur=n Prepend Append (last 2 are silently ignored)"
-  return
-fi
+}
 #
-# START of r.load.dot options processing
+# PROCESS r.load.dot options
 #
-[[ "$1" = -list || "$1" = --list ]] && shift           # ignored for the time being, accepted for backward compatibility
-#
-[[ "$1" = '-append' || "$1" = '--append' ]] && shift   # feature no longer supported by ssm, accepted and ignored for backward compatibility
-#
-add_unload=""
-if [[ "$1" = '-unuse' || "$1" = '--unuse' ]] ; then    # this will only work for gnu/lmod modules 
-  add_unload="unload"
+while [[ "$1" == -* ]] ; do
+  case ${1##*-} in
+    (h|help) usage ; return ;;
+    (list)   ;;  # ignored for the time being, accepted for backward compatibility
+    (append) ;;  # feature no longer supported by ssm, ignored for compatibility
+    (unuse)  add_unload="unload" ;;   # this will only work for gnu/lmod modules 
+    (use)    add_unload="      " ;;   # this will only work for gnu/lmod modules 
+    (nobinbump) NoBinBump="NoBinBump" ;;  # inactive for now
+    (level1)   RecursionLevel=""  ;;   # clear recursion stack and old targets, force top level instance
+    ("")      shift ; break ;; # --
+    (*)       echo "WARNING: unrecognized option '$1', ignored " ;;
+  esac
   shift
-fi
-#
-NoBinBump=${NO_BIN_BUMP}
-[[ "$1" = '-nobinbump' || "$1" = '--nobinbump' ]] && NoBinBump="NoBinBump" && shift  # inactive for now
-#
-[[ "$1" = '-reset' || "$1" = '--reset' ]] && RecursionLevel="" && shift # clear recursion stack and old targets, force top level instance
+done
 #
 #  END of r.load.dot options processing
 #
 if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize internal variables, define functions
-echo DEBUG: entering BASE LEVEL
   unset TargetsV01
+  add_unload="${add_unload}"
+  NoBinBump=${NoBinBump:-${NO_BIN_BUMP}}
   StAtUs=0
   ModuleMode=Add
   DelayedSsmuse=""
