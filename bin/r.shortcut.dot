@@ -6,8 +6,8 @@
 [[ -z $CMD_sed ]] && eval $(afterburn_commands --export sed xargs cat grep rm)
 [[ -f $TMPDIR/bin/true_path ]] || ln -sf `which true_path` $TMPDIR/bin/true_path
 [[ -f $TMPDIR/bin/r.shortcut-cfg ]] || ln -sf `which r.shortcut-cfg` $TMPDIR/bin/r.shortcut-cfg
-if [[ -z ${USE_RECURSIVE_SHORTCUTS} ]] ; then    #   non recursive mode
-  source r.shortcut-2.dot 2>/dev/null
-else                                         #  recursive mode
+if [[ -n ${USE_RECURSIVE_SHORTCUTS} || -f ${HOME}/.USE_RECURSIVE_SHORTCUTS ]] ; then    #    recursive mode
   source r.shortcut-2r.dot 2>/dev/null
+else                                         #  non recursive mode
+  source r.shortcut-2.dot 2>/dev/null
 fi
