@@ -1,11 +1,15 @@
 #
-# usage
-# source r.load.dot "$@"
+# usage : source r.load.dot "$@"
 #
 #ENV_TEST_MODE='-alpha'
+TRUE_PATH=$(which true_path)
+RSHORTCUTCFG=$(which r.shortcut-cfg)
+[[ -n $TRUE_PATH ]] || { echo "Error: true_path not found" ; return 1 ; }
+[[ -n $RSHORTCUTCFG ]] || { echo "Error: r.shortcut-sfg not found" ; return 1 ; }
 [[ -z $CMD_sed ]] && eval $(afterburn_commands --export sed xargs cat grep rm)
-[[ -f $TMPDIR/bin/true_path ]] || ln -sf `which true_path` $TMPDIR/bin/true_path
-[[ -f $TMPDIR/bin/r.shortcut-cfg ]] || ln -sf `which r.shortcut-cfg` $TMPDIR/bin/r.shortcut-cfg
+[[ -e $TMPDIR/bin/true_path ]] || ln -sf $TRUE_PATH $TMPDIR/bin/true_path
+[[ -e $TMPDIR/bin/r.shortcut-cfg ]] || ln -sf $RSHORTCUTCFG $TMPDIR/bin/r.shortcut-cfg
+#
 if [[ -z ${RECURSIVE_SHORTCUTS} ]] ; then
   source r.shortcut-2.dot 2>/dev/null
 else
