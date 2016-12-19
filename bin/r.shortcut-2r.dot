@@ -1,8 +1,38 @@
 #
 #  for bash or ksh[93] or compatible sh family shell
 #
-if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize some internal variables
+function usage
+{
+  echo "usage: . r.load.dot [-h|--help] [--list ] [--append] [--unuse] [--use] [--nobinbump] [--level1] [--] ITEM1 ... ITEMn"
+  echo "NOTES: - and -- options are ORDER INDEPENDENT, --append is deprecated and ignored"
+  echo "       options MUST appear BEFORE items"
+  echo "       anything after -- is considered to be an item"
+  echo "Special tokens recognized: InOrder NoOrder FlushSsm Recur=n Prepend Append (last 2 are silently ignored)"
+}
+#
+# PROCESS r.load.dot options
+#
+while [[ "$1" == -* ]] ; do
+  case ${1##*-} in
+    (h|help) usage ; return ;;
+    (list)   ;;  # ignored for the time being, accepted for backward compatibility
+    (append) ;;  # feature no longer supported by ssm, ignored for compatibility
+    (unuse)  add_unload="unload" ;;   # this will only work for gnu/lmod modules 
+    (use)    add_unload="      " ;;   # this will only work for gnu/lmod modules 
+    (nobinbump) NoBinBump="NoBinBump" ;;  # inactive for now
+    (level1)   RecursionLevel=""  ;;   # clear recursion stack and old targets, force top level instance
+    ("")      shift ; break ;; # --
+    (*)       echo "WARNING: unrecognized option '$1', ignored " ;;
+  esac
+  shift
+done
+#
+#  END of r.load.dot options processing
+#
+if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize internal variables, define functions
   unset TargetsV01
+  add_unload="${add_unload}"
+  NoBinBump=${NoBinBump:-${NO_BIN_BUMP}}
   StAtUs=0
   ModuleMode=Add
   DelayedSsmuse=""
@@ -26,28 +56,9 @@ fi   # top level instance
 #
 ((RecursionLevel > ${MaxRecursionLevel:-3})) && echo "WARNING: too many recursion levels (${RecursionLevel}>${MaxRecursionLevel})" && return
 ((RecursionLevel=RecursionLevel+1))
-#
-if [[ "$1" = -h || "$1" = --he* ]] ; then
-  echo "usage: . r.load.dot [-h|--help] [--list ] [--append] [--unuse] [--nobinbump] [--verbose] ITEM1 ... ITEMn"
-  echo "NOTES: arguments are ORDER DEPENDENT, --append is deprecated and ignored"
-  echo "Special tokens recognized: InOrder NoOrder FlushSsm Recur=n Prepend Append (last 2 are silently ignored)"
-  return
-fi
-[[ "$1" = -list || "$1" = --list ]] && shift && r.shortcuts
 unset -f ssmuse || true  # in case there is a function called ssmuse (old setup)
 #
-if [[ "$1" = '-append' || "$1" = '--append' ]] ; then   shift ; fi # feature no longer supported by ssm, accepted and ignored for backward compatibility
-#
-add_unload=""
-if [[ "$1" = '-unuse' || "$1" = '--unuse' ]] ; then  # will now work only for gnu/lmod modules 
-  add_unload="unload"
-  shift
-fi
-
-NoBinBump=${NO_BIN_BUMP}
-[[ "$1" = '-nobinbump' || "$1" = '--nobinbump' ]] && NoBinBump="NoBinBump"
-#
-echo "INFO: shortcut${ENV_TEST_MODE}.dot $@"
+echo "INFO: (level ${RecursionLevel}) shortcut${ENV_TEST_MODE}.dot $@"
 #
 TargetsV01="$(r.resolve_shortcuts $*  2>$TMPDIR/resolve_messages_$$ | xargs) ${TargetsV01} "   # add before remaining targets
 ${CMD_cat:-$(which cat)} $TMPDIR/resolve_messages_$$
@@ -55,16 +66,17 @@ ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 #
 if((RecursionLevel>1)) ; then       # in recursive mode, job done, do not unset variables nor undefine functions before returning to caller
  ((RecursionLevel=RecursionLevel-1))
- echo "INFO: returning from level $RecursionLevel"
+#  echo "INFO: returning from level $RecursionLevel"
  return
 fi
 #
-while true   # loop until no target left
-do
+while true ; do
   TargetV01=${TargetsV01%% *} ; TargetV01=${TargetV01%% }      # get first target from list, flush trailing blanks
-  TargetsV01="${TargetsV01#* }"         # remove current target from list of targets
+  TargetsV01="${TargetsV01#* }"      # remove current target from list of targets
   [[ -z $TargetV01 ]] && break       # nothing left, quit
-  for TeMp in ${ProcessedTargetsV01:-NotFoundHere} ; do [[ "$TeMp" == "$TargetV01" ]] && echo "WARNING: duplicate shortcut: '$TargetV01'" && TargetV01="" && break ; done
+  for TeMp in ${ProcessedTargetsV01:-NotFoundHere} ; do 
+    [[ "$TeMp" == "$TargetV01" ]] && echo "WARNING: duplicate shortcut: '$TargetV01'" && TargetV01="" && break
+  done
   [[ -z $TargetV01 ]] && continue    # duplicate target, ignore it
   ProcessedTargetsV01="${ProcessedTargetsV01} ${TargetV01}"  # add to processed target list
   export SSM_SHORTCUT="$TargetV01"   # to be used if needed in module or .sh
@@ -91,15 +103,15 @@ do
   if [[ "$TargetV01" == ++* ]] ; then export SHORTCUT_BUNDLE_PATH="${TargetV01#++@}" ; continue ; fi
 
   [[ -n "${SHORTCUT_BUNDLE_PATH}" ]] && echo "INFO: SHORTCUT BUNDLE PATH=${SHORTCUT_BUNDLE_PATH}"
-
+# 
 # package@domain, use true_path for fully qualified package (name_version_platform)
   if [[ -d "${TargetV01#*@}/etc/ssm.d/installed" && -d "${TargetV01#*@}/${TargetV01%@*}" ]] ; then
-     echo "INFO: USING PACKAGE "(fully qualified)" ${TargetV01%@*} from DOMAIN $(true_path ${TargetV01#*@})"
+     echo "INFO: USING PACKAGE (fully qualified) ${TargetV01%@*} from DOMAIN $(true_path ${TargetV01#*@})"
      [[ -z ${DelayedMode} ]] && ssmuse_domain $(true_path ${TargetV01#*@}) -p ${TargetV01%@*}
      [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -p $(true_path ${TargetV01#*@})/${TargetV01%@*}"
      continue
   fi
-
+# 
 # package@domain, use true_path for NOT fully qualified package (name_version)
   if [[ -d "${TargetV01#*@}/etc/ssm.d/installed" ]] ; then
     if  is_package ${TargetV01#*@}/${TargetV01%@*}_* ; then
@@ -109,7 +121,7 @@ do
       continue
     fi
   fi
-
+# 
 # domain without cache or caching is disallowed
   if [[ -d "${TargetV01}/etc/ssm.d/installed" && ! ( -f "${TargetV01}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ) ]] ; then 
     echo "INFO: USING DOMAIN `true_path $TargetV01`"
@@ -117,17 +129,18 @@ do
     [[ -n ${DelayedMode} ]] && DelayedSsmuse="${DelayedSsmuse} -d $(true_path $TargetV01)"
     continue
   fi
-
+# 
 # non ssm element, process delayed ssmuse-sh unless in NoOrder mode
   [[ -n "${DelayedSsmuse}" ]] && [[ -z ${NoOrder} ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""
-
+# 
 # domain with cache and caching is permitted
   if [[ -f "${TargetV01}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ]] ; then
+    source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""     # must process delayed ssmuse-sh now if using domain cache to preserve package ordering
     echo "INFO: USING cache for DOMAIN `true_path $TargetV01`"
     source ${TargetV01}/cache.$BASE_ARCH
     continue
   fi
-
+# 
 # name.sh type shortcut
   if [[ "$TargetV01" = *.sh && -r "$TargetV01" ]] ; then
     echo "INFO: USING SHORTCUT $TargetV01" ;
@@ -137,7 +150,7 @@ do
     if [[ ${StAtUs} == "110" ]] ; then echo "WARNING: break requested by shortcut ${TargetV01}" ; StAtUs=0 ; break ; fi
     continue ;
   fi
-
+# 
 # if we get to this point it must be a module (an error in module processing is considered fatal)
   if source module.dot ${add_unload:-add} ${TargetV01} 2>&1 ; then
     echo "INFO: ${add_unload:-add} ${TargetV01}"
@@ -145,11 +158,10 @@ do
   else
     echo "ERROR: abort requested by . module.dot ${add_unload:-add} ${TargetV01}" ; StAtUs=1 ; break ;
   fi
-
-# OOPS, nothing matches
+# 
+# OOPS, nothing matches (can't happen here)
   echo "WARNING: NO SHORTCUT FOUND FOR ${TargetV01}"
 done
-
 # apply leftover delayed elements for ssmuse-sh
 [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse}
 #

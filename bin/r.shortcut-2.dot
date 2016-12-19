@@ -1,6 +1,7 @@
 #      bash or ksh
+[[ -n $Target ]] && echo "WARNING: recursive call detected and ignored" && unset Target && return
 if [[ "$1" = -h || "$1" = --he* ]] ; then
-  echo "usage: . r.shortcut.dot [-h|--help] [--list ] [--append] [--unuse] [--nobinbump] [--verbose] ITEM1 ... ITEMn"
+  echo "usage: . r.shortcut.dot [-h|--help] [--list ] [--append] [--unuse] [--nobinbump] ITEM1 ... ITEMn"
   echo "NOTES: arguments are ORDER DEPENDENT, --append is deprecated and ignored"
   echo "Special tokens recognized: InOrder NoOrder FlushSsm Prepend Append (last 2 are ignored)"
   return
