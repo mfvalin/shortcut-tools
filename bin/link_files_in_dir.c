@@ -7,7 +7,9 @@
 #define MAX_ENTRIES 200
 
 usage(char *str) {
-  fprintf(stderr,"Usage: %s [--lib] [--debug] [--verbose] [--max maxdirsize] [--prefix prefix] [--optimize list:of:start:of:paths ] to_scan1 target1 ... to_scanN targetN \n",str);
+  fprintf(stderr,"Usage: %s [--lib] [--debug] [--verbose] [--strict] [--max maxdirsize] [--prefix prefix] \\\n");
+  fprintf(stderr,"          [--optimize list:of:start:of:paths ] [--ignore list:of:start:of:paths] \\\n");
+  fprintf(stderr,"          to_scan1 target1 ... to_scanN targetN \n",str);
   exit(1);
 }
 
@@ -24,11 +26,21 @@ main(int argc, char **argv){
   char *my_name = argv[0];
   char *dir_prefix="";
   char *opt_prefix="";
+  char *opt_prefixes[128];
+  char *noopt_prefix="";
+  char *noopt_prefixes[128];
+  char *temp;
+  int i;
   int max_entries=MAX_ENTRIES;
   int debug=0;
   int verbose=0;
+  int strict=0;
 
   if(argc <= 1) usage(my_name);
+
+  for(i=0 ; i<128; i++) opt_prefixes[i] = NULL ;
+  for(i=0 ; i<128; i++) noopt_prefixes[i] = NULL ;
+
   while(*argv[1] == '-' ){   // process options
 
     if(strcmp("--help",argv[1]) == 0 || strcmp("-h",argv[1]) == 0 ) {
@@ -38,6 +50,12 @@ main(int argc, char **argv){
       argc--;
       argv++;
       look_for_so=1;
+      goto loop;
+    }
+    if(strcmp("--strict",argv[1]) == 0) {  /* library path mode, look for .so */
+      argc--;
+      argv++;
+      strict=1;
       goto loop;
     }
     if(strcmp("--debug",argv[1]) == 0) {  /* library path mode, look for .so */
@@ -71,9 +89,29 @@ main(int argc, char **argv){
     if(strcmp("--optimize",argv[1]) == 0) {  /* library path mode, look for .so */
       if(argc <= 2) usage(my_name);
       opt_prefix = argv[2];
+      if(verbose) fprintf(stderr,"DEBUG: paths to optimize with links : '%s'\n",argv[2]);
       argc-=2;
       argv+=2;
-      if(verbose) fprintf(stderr,"DEBUG: to optimize with links : '%s'\n",opt_prefix);
+      i = 0; temp = opt_prefix; opt_prefixes[0] = temp ;
+      while(*temp) {
+	if(*temp == ':') { *temp = '\0' ; temp++ ; opt_prefixes[++i] = temp; }
+	temp++;
+      }
+      if(debug) fprintf(stderr,"DEBUG: %d elements to optimize found\n",i+1);
+      goto loop;
+    }
+    if(strcmp("--ignore",argv[1]) == 0) {  /* library path mode, look for .so */
+      if(argc <= 2) usage(my_name);
+      noopt_prefix = argv[2];
+      if(verbose) fprintf(stderr,"DEBUG: paths to ignore : '%s'\n",argv[2]);
+      argc-=2;
+      argv+=2;
+      i = 0; temp = noopt_prefix; noopt_prefixes[0] = temp ;
+      while(*temp) {
+	if(*temp == ':') { *temp = '\0' ; temp++ ; noopt_prefixes[++i] = temp; }
+	temp++;
+      }
+      if(debug) fprintf(stderr,"DEBUG: %d elements to ignore found\n",i+1);
       goto loop;
     }
     fprintf(stderr,"ERROR: unrecognized option '%s' ignored\n",argv[1]);
@@ -87,9 +125,29 @@ loop:
   while(argc > 2) {   // process directory pairs
 
     if(debug) fprintf(stderr,"processing '%s' -> '%s'\n",argv[1],argv[2]);
+
+    for(i=0 ; noopt_prefixes[i] ; i++) {
+      if( strstr(argv[1],noopt_prefixes[i]) == argv[1] ) {
+	if(verbose) fprintf(stderr,"INFO: ignoring '%s'\n",argv[1]);
+	goto loop2;
+      }
+    }
+    if(opt_prefixes[0] == NULL) goto process;    // not in optimize list mode, only ignore the no optimize list
+
+    for(i=0 ; opt_prefixes[i] ; i++) {
+      if( strstr(argv[1],opt_prefixes[i]) == argv[1] ) {
+	if(verbose) fprintf(stderr," optimizing '%s'\n",argv[1]);
+	goto process;
+      }
+    }
+    if(verbose) fprintf(stderr,"INFO: ignoring '%s'\n",argv[1]);
+    goto loop2;   // not found
+
+process:
     dirp = opendir(argv[1]);
     if(dirp == NULL) { /* error while trying to open directory, next */
       fprintf(stderr,"ERROR: cannot open '%s'\n",argv[1]);
+      if(strict) exit(1);
       goto loop2;
     }
 
