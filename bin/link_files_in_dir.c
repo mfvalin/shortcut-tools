@@ -130,14 +130,14 @@ main(int argc, char **argv){
     if(! debug) usage(my_name);
     argc--;
     argv++;
-  }
+  }   // process options loop end
 
-  cprefix = "";
+  cprefix = "";  // separator for output list
   for( ; argc > 1 ; argc--, argv++, cprefix = ":" ) {   // process directories in path
 
     if(debug) fprintf(stderr,"processing '%s' -> '%s'\n",argv[1],argv[2]);
     optimize = 1;    // optimize a priori
-
+//  --ignore option
     for(i=0 ; noopt_prefixes[i] ; i++) {   // scan the prefix to ignore list
       if( strstr(argv[1],noopt_prefixes[i]) == argv[1] ) {      // we have a hit
 	if(verbose) fprintf(stderr,"INFO: ignoring '%s'\n",argv[1]);
@@ -145,7 +145,7 @@ main(int argc, char **argv){
 	break ;
       }
     }
-
+//  --optimize option
     if(optimize && opt_prefixes[0] != NULL) {    // if no "optimize prefix" list, process everything not already ignored
       optimize = 0;
       for(i=0 ; opt_prefixes[i] ; i++) {   // scan the prefix to optimize list
@@ -194,11 +194,16 @@ main(int argc, char **argv){
       snprintf(target_subdir,sizeof(target_subdir),"cache_%4.4d",create) ;
       snprintf(new_path,sizeof(new_path),"%s/%s",dir_prefix,target_subdir) ;  // target sub directory
       if(create != created) {                     // if not already done
-	mkdir(new_path,0700) ;                    // create target sub directory
-	fprintf(stdout,"%s%s",cprefix,new_path);  // print optimized path directory
+	if(mkdir(new_path,0700)) {                    // create target sub directory
+	  fprintf(stdout,"%s%s",cprefix,argv[1]);     // mkdir failed, keep original path
+	  optimize = 0 ;
+	}else{
+	  fprintf(stdout,"%s%s",cprefix,new_path);  // print optimized path directory
+	}
       }
       created = create ;
-      while ((entry = readdir(dirp)) != NULL) {           // process directory to optimize entries
+      if(optimize) {                                      // will be false if mkdir failed
+	while ((entry = readdir(dirp)) != NULL) {         // process "directory to optimize" entries
 	  if(strcmp("." ,entry->d_name) == 0) continue;   // ignore . and ..
 	  if(strcmp("..",entry->d_name) == 0) continue;
 #ifdef __linux
@@ -214,6 +219,7 @@ main(int argc, char **argv){
 
 	  status = symlink(old_path,new_path);
 	  if(status==0)file_count++;
+	}
       }
     }
     /*fprintf(stderr,"Linked %d files from %s into %s\n",file_count,argv[1],argv[2]);   */
