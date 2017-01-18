@@ -189,9 +189,10 @@ main(int argc, char **argv){
       fprintf(stdout,"%s%s",cprefix,argv[1]); // print ignored path directory
       create++ ;
     }else{
-      rewinddir(dirp);
+      if(! multi) create++ ;
+      rewinddir(dirp) ;
       snprintf(target_subdir,sizeof(target_subdir),"cache_%4.4d",create) ;
-      snprintf(new_path,sizeof(new_path),"%s/%s",dir_prefix,target_subdir);  // target sub directory
+      snprintf(new_path,sizeof(new_path),"%s/%s",dir_prefix,target_subdir) ;  // target sub directory
       if(create != created) {                     // if not already done
 	mkdir(new_path,0700) ;                    // create target sub directory
 	fprintf(stdout,"%s%s",cprefix,new_path);  // print optimized path directory
