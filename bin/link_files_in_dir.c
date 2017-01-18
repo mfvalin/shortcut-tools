@@ -56,31 +56,26 @@ main(int argc, char **argv){
       argc--;
       argv++;
       look_for_so=1;
-      continue;
     }
     else if(strcmp("--multi",argv[1]) == 0) {  // multiple sources ito same target
       argc--;
       argv++;
       multi=1;
-      continue;
     }
     else if(strcmp("--strict",argv[1]) == 0) {  // strict mode, abort on more errors
       argc--;
       argv++;
       strict=1;
-      continue;
     }
     else if(strcmp("--debug",argv[1]) == 0) {  // debug mode
       argc--;
       argv++;
       debug=1;
-      continue;
     }
     else if(strcmp("--verbose",argv[1]) == 0) {  // verbose mode
       argc--;
       argv++;
       verbose=1;
-      continue;
     }
     else if(strcmp("--max",argv[1]) == 0) {  // max number of links from a single directory
       max_entries = atoi(argv[2]);
@@ -88,7 +83,6 @@ main(int argc, char **argv){
       argc-=2;
       argv+=2;
       if(verbose) fprintf(stderr,"DEBUG: max entries = %d\n",max_entries);
-      continue;
     }
     else if(strcmp("--prefix",argv[1]) == 0) {  // prefix for target directories
       if(argc <= 2) usage(my_name);
@@ -96,7 +90,6 @@ main(int argc, char **argv){
       argc-=2;
       argv+=2;
       if(verbose) fprintf(stderr,"DEBUG: target prefix = '%s'\n",dir_prefix);
-      continue;
     }
     else if(strcmp("--optimize",argv[1]) == 0) {  // directory start pattern to optimize
       if(argc <= 2) usage(my_name);
@@ -110,7 +103,6 @@ main(int argc, char **argv){
 	temp++;
       }
       if(debug) fprintf(stderr,"DEBUG: %d elements to optimize found\n",i+1);
-      continue;
     }
     else if(strcmp("--ignore",argv[1]) == 0) {  // directory start pattern to ignore
       if(argc <= 2) usage(my_name);
@@ -124,7 +116,6 @@ main(int argc, char **argv){
 	temp++;
       }
       if(debug) fprintf(stderr,"DEBUG: %d elements to ignore found\n",i+1);
-      continue;
     }
     else {
       fprintf(stderr,"ERROR: unrecognized option '%s' ignored\n",argv[1]);
