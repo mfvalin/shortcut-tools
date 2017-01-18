@@ -44,7 +44,7 @@ main(int argc, char **argv){
 
   for(i=0 ; i<128; i++) opt_prefixes[i] = NULL ;
   for(i=0 ; i<128; i++) noopt_prefixes[i] = NULL ;
-
+/*============================== process options ==============================*/
   while(argc > 1){   // process options
 
     if(*argv[1] != '-' ) break ;
@@ -52,37 +52,37 @@ main(int argc, char **argv){
     if(strcmp("--help",argv[1]) == 0 || strcmp("-h",argv[1]) == 0 ) {
       usage(my_name);
     }
-    if(strcmp("--lib",argv[1]) == 0) {  /* library path mode, look for .so */
+    else if(strcmp("--lib",argv[1]) == 0) {  /* library path mode, look for .so */
       argc--;
       argv++;
       look_for_so=1;
       continue;
     }
-    if(strcmp("--multi",argv[1]) == 0) {  // multiple sources ito same target
+    else if(strcmp("--multi",argv[1]) == 0) {  // multiple sources ito same target
       argc--;
       argv++;
       multi=1;
       continue;
     }
-    if(strcmp("--strict",argv[1]) == 0) {  // strict mode, abort on more errors
+    else if(strcmp("--strict",argv[1]) == 0) {  // strict mode, abort on more errors
       argc--;
       argv++;
       strict=1;
       continue;
     }
-    if(strcmp("--debug",argv[1]) == 0) {  // debug mode
+    else if(strcmp("--debug",argv[1]) == 0) {  // debug mode
       argc--;
       argv++;
       debug=1;
       continue;
     }
-    if(strcmp("--verbose",argv[1]) == 0) {  // verbose mode
+    else if(strcmp("--verbose",argv[1]) == 0) {  // verbose mode
       argc--;
       argv++;
       verbose=1;
       continue;
     }
-    if(strcmp("--max",argv[1]) == 0) {  // max number of links from a single directory
+    else if(strcmp("--max",argv[1]) == 0) {  // max number of links from a single directory
       max_entries = atoi(argv[2]);
       if(argc <= 2) usage(my_name);
       argc-=2;
@@ -90,7 +90,7 @@ main(int argc, char **argv){
       if(verbose) fprintf(stderr,"DEBUG: max entries = %d\n",max_entries);
       continue;
     }
-    if(strcmp("--prefix",argv[1]) == 0) {  // prefix for target directories
+    else if(strcmp("--prefix",argv[1]) == 0) {  // prefix for target directories
       if(argc <= 2) usage(my_name);
       dir_prefix = argv[2];
       argc-=2;
@@ -98,7 +98,7 @@ main(int argc, char **argv){
       if(verbose) fprintf(stderr,"DEBUG: target prefix = '%s'\n",dir_prefix);
       continue;
     }
-    if(strcmp("--optimize",argv[1]) == 0) {  // directory start pattern to optimize
+    else if(strcmp("--optimize",argv[1]) == 0) {  // directory start pattern to optimize
       if(argc <= 2) usage(my_name);
       opt_prefix = argv[2];
       if(verbose) fprintf(stderr,"DEBUG: paths to optimize with links : '%s'\n",argv[2]);
@@ -112,7 +112,7 @@ main(int argc, char **argv){
       if(debug) fprintf(stderr,"DEBUG: %d elements to optimize found\n",i+1);
       continue;
     }
-    if(strcmp("--ignore",argv[1]) == 0) {  // directory start pattern to ignore
+    else if(strcmp("--ignore",argv[1]) == 0) {  // directory start pattern to ignore
       if(argc <= 2) usage(my_name);
       noopt_prefix = argv[2];
       if(verbose) fprintf(stderr,"DEBUG: paths to ignore : '%s'\n",argv[2]);
@@ -126,12 +126,15 @@ main(int argc, char **argv){
       if(debug) fprintf(stderr,"DEBUG: %d elements to ignore found\n",i+1);
       continue;
     }
-    fprintf(stderr,"ERROR: unrecognized option '%s' ignored\n",argv[1]);
-    if(! debug) usage(my_name);
-    argc--;
-    argv++;
+    else {
+      fprintf(stderr,"ERROR: unrecognized option '%s' ignored\n",argv[1]);
+      if(! debug) usage(my_name);
+      argc--;
+      argv++;
+    }
   }   // process options loop end
-
+/*=============================================================================*/
+/*============================ process directories ============================*/
   cprefix = "";  // separator for output list
   for( ; argc > 1 ; argc--, argv++, cprefix = ":" ) {   // process directories in path
 
@@ -225,5 +228,6 @@ main(int argc, char **argv){
     /*fprintf(stderr,"Linked %d files from %s into %s\n",file_count,argv[1],argv[2]);   */
     closedir(dirp);
   }
+/*=============================================================================*/
   exit(0);
 }
