@@ -1,6 +1,87 @@
 #!/bin/bash
-[[ "${1}" == "-x" || "${1}" == "--export" ]] && ExPoRt="export " && shift
-for Target in $*
-do
-  which ${Target} 2>/dev/null 1>/dev/null && echo "${ExPoRt}CMD_${Target}=$(which ${Target})"
-done
+usage() {
+cat <<EOT
+#
+# command "afterburner", 
+#            1) put links to commands into $TMPDIR/bin
+#            2) produce a set of export CMD_xx=/path/to/xx lines
+#
+# usage : ${##*/0} [-v] [-q] [-d] list of commands
+#         if command is @file_name, @file_name gets replaced by its contents
+#         this works up to 5 files  deep
+#         -d option causes removal from $TMPDIR/bin
+#         -v verbose mode
+#         -q quiet (silent) mode
+#
+# usage :  ${##*/0} -x list of commands
+#
+EOT
+}
+[[ "$1" == --h* || "$1" == -h* ]] && usage && exit 0
+
+# the commands used in this script (which might get "afterburned"
+# look into /bin and /usr/bin
+CMD_true=/bin/true
+[[ -x /usr/bin/true ]] && CMD_true=/usr/bin/true
+CMD_rm=/bin/rm
+[[ -x /usr/bin/rm ]] && CMD_rm=/usr/bin/rm
+CMD_ln=/bin/ln
+[[ -x /usr/bin/ln ]] && CMD_ln=/usr/bin/ln
+CMD_cat=/bin/cat
+[[ -x /usr/bin/cat ]] && CMD_cat=/usr/bin/cat
+
+#uncomment one of the followinf 2 lines to set the verbosity default
+CMD_echo=echo
+#CMD_echo=$CMD_true
+[[ "${1}" == "-v" || "${1}" == --v* ]] && CMD_echo=echo && shift           # verbose, set CMD_echo to echo
+[[ "${1}" == "-q" || "${1}" == --q* ]] && CMD_echo=$CMD_true && shift      # quiet, set CMD_echo to $CMD_true
+[[ "${1}" == "-x" || "${1}" == "--export" ]] && ExPoRt="export " && shift  # export mode, to be "eval'd"
+
+((depth=0))
+
+if [[ -n ${ExPoRt} ]] ; then   # put cached entries in environment variables CMD_xxx
+  for Target in $*
+  do
+    which ${Target} 2>/dev/null 1>/dev/null && $CMD_echo "${ExPoRt}CMD_${Target}=$(which ${Target})"
+  done
+else                           # put cached entries in override directory $TMPDIR/bin
+  unset Mode
+  [[ "$1" == -*r* || "$1" == -*d* ]] && export Mode="$1" && shift
+  cd ${TMPDIR}/bin
+
+  while [[ -n "$1" ]] ; do
+    if [[ "$1" == @* ]] ; then # get list of commands from a file
+      [[ -r ${1#@} ]] || { echo "ERROR: '${1#@}' is not readable" ; shift ; continue ; }
+      file=${1#@}
+      shift
+      if((depth<5)) ; then
+        ((depth=depth+1))
+        set -- $($CMD_cat $file | tr '\n' ' ') PoPsTaCk $@
+      else
+        echo "ERROR: too many levels of indirection (max=$depth)"
+#        exit 1
+      fi
+    else
+      if [[ $1 == PoPsTaCk ]] ; then 
+        ((depth=depth-1)) ; 
+        shift ; 
+        continue ; 
+      fi
+      if [[ -n "$Mode" ]] ; then
+        $CMD_rm -- $1 2>/dev/null &&  $CMD_echo "INFO: removing $1 from cache"
+      else
+        $CMD_rm -- $1 2>/dev/null || $CMD_echo "INFO: caching $1"    # remove old entry if any
+        what=$(which -- $1 2>&1)   # get path to command
+        if [[ -x "$what" ]] ; then
+          $CMD_ln -s $(readlink -e $what) $1   # use true path of command
+        else
+          $CMD_echo "WARNING: command $1 not found"
+        fi
+      fi
+      shift
+    fi
+#    hash -r  # no longer needed as we use explicit path to commands
+  done
+fi
+((depth==0)) || echo "ERROR: depth=$depth, should be 0"
+#$CMD_echo "INFO:depth=$depth"
