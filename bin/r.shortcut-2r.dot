@@ -54,7 +54,8 @@ if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize internal va
 #
 fi   # top level instance
 #
-((RecursionLevel > ${MaxRecursionLevel:-3})) && echo "WARNING: too many recursion levels (${RecursionLevel}>${MaxRecursionLevel})" && return
+MaxRecursionLevel=${MaxRecursionLevel:-3}
+((RecursionLevel > ${MaxRecursionLevel})) && echo "WARNING: too many recursion levels (${RecursionLevel}>${MaxRecursionLevel})" && return
 ((RecursionLevel=RecursionLevel+1))
 unset -f ssmuse || true  # in case there is a function called ssmuse (old setup)
 #
