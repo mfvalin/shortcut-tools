@@ -5,7 +5,7 @@
 TRUE_PATH=$(which true_path)
 RSHORTCUTCFG=$(which r.shortcut-cfg)
 [[ -n $TRUE_PATH ]] || { echo "Error: true_path not found" ; return 1 ; }
-[[ -n $RSHORTCUTCFG ]] || { echo "Error: r.shortcut-sfg not found" ; return 1 ; }
+[[ -n $RSHORTCUTCFG ]] || { echo "Error: r.shortcut-cfg not found" ; return 1 ; }
 [[ -z $CMD_sed ]] && eval $(afterburn_commands --export sed xargs cat grep rm)
 [[ -e $TMPDIR/bin/true_path ]] || ln -sf $TRUE_PATH $TMPDIR/bin/true_path
 [[ -e $TMPDIR/bin/r.shortcut-cfg ]] || ln -sf $RSHORTCUTCFG $TMPDIR/bin/r.shortcut-cfg
