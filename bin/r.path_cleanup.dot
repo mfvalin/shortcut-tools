@@ -21,9 +21,13 @@
 # derive base EC_INCLUDE_PATH from SSM_INCLUDE_PATH
   export EC_INCLUDE_PATH="$(echo $SSM_INCLUDE_PATH | sed 's/:/ /g') "
 #
-# derive base EC_LD_LIBRARY_PATH from SSM_INCLUDE_PATH
+# derive base EC_LD_LIBRARY_PATH from SSM_INCLUDE_PATH (deprecated)
 #  export EC_LD_LIBRARY_PATH="$(echo $LD_LIBRARY_PATH | sed 's/:/ /g')"
-  export EC_LD_LIBRARY_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include:%/lib %g' -e 's%/include/%/lib/%g' -e 's/:/ /g' ) "
+#  export EC_LD_LIBRARY_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include:%/lib %g' -e 's%/include/%/lib/%g' -e 's/:/ /g' ) "
+#
+# derive base EC_LD_LIBRARY_PATH from SSM_LIB_PATH (derived from SSM_INCLUDE_PATH if absent)
+  [[ -z $SSM_LIB_PATH ]] && export SSM_LIB_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include:%/lib %g' -e 's%/include/%/lib/%g')"
+  export EC_LD_LIBRARY_PATH="$(echo $SSM_LIB_PATH | sed 's/:/ /g') "
 #
 # cleanup and expansion for EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH (used later by s.compile and consorts)
   COMP_ARCH=${COMP_ARCH:-${EC_ARCH#${BASE_ARCH}}}    # in case it is not defined
