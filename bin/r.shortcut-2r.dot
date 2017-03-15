@@ -37,7 +37,9 @@ if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize internal va
   ModuleMode=Add
   DelayedSsmuse=""
   DelayedMode="YES"
-  which ssmuse-sh 2>/dev/null >/dev/null || DelayedMode=""
+  which __ssmuse 2>/dev/null >/dev/null || DelayedMode=""
+  SsmuseCommand="ssmuse sh"
+  which ssmuse-sh 2>/dev/null >/dev/null || SsmuseCommand="ssmuse-sh"
   [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
   NoOrder=""
 #
@@ -49,7 +51,7 @@ if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize internal va
   function ssmuse_domain   # old call to ssmuse (only if ssmuse-sh not found)
   {
     echo "INFO: subscribing to $*"
-    eval "`ssmuse sh -d $*`"
+    eval "`${SsmuseCommand} -d $*`"
   }
 #
 fi   # top level instance

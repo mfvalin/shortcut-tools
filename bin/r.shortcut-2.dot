@@ -26,10 +26,12 @@ function is_package
 #   ${SsMuSe} ${ShElL} "$@"
 #   unset ShElL || true
 # }
+SsmuseCommand="ssmuse sh"
+which ssmuse-sh 2>/dev/null >/dev/null || SsmuseCommand="ssmuse-sh"
 function ssmuse_domain
 {
  echo subscribing to $*
- eval "`ssmuse sh -d $*`"
+ eval "`${SsmuseCommand} -d $*`"
 }
 #
 #function ssmunuse_domain  # deprecated feature
@@ -67,7 +69,7 @@ ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 ModuleMode=Add
 DelayedSsmuse=""
 DelayedMode="YES"
-which ssmuse-sh 2>/dev/null >/dev/null || DelayedMode=""
+which  __ssmuse 2>/dev/null >/dev/null || DelayedMode=""
 [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
 NoOrder=""
 
