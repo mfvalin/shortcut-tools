@@ -14,24 +14,39 @@
     export FIX_THE_PATHS=true
   fi
 
-  eval $(${FIX_THE_PATHS} ${VerboseCleanupActive} +${ORDENV_PLAT}+${BASE_ARCH} PATH MANPATH LD_LIBRARY_PATH LD_RUN_PATH PYTHONPATH TCL_LIBRARY LIBPATH SSM_INCLUDE_PATH SSM_LIB_PATH SSM_SHORTCUT_PATH)
+  eval $(${FIX_THE_PATHS} ${VerboseCleanupActive} +${ORDENV_PLAT}+${BASE_ARCH} PATH MANPATH LD_LIBRARY_PATH LD_RUN_PATH PYTHONPATH TCL_LIBRARY LIBPATH SSM_INCLUDE_PATH)
+###  eval $(${FIX_THE_PATHS} ${VerboseCleanupActive} PATH MANPATH LD_LIBRARY_PATH LD_RUN_PATH PYTHONPATH TCL_LIBRARY LIBPATH SSM_INCLUDE_PATH)  # Hack 1 to remove by fixing r.fix_the_paths.c
 #
   export MANPATH="${MANPATH}:"  # keep honoring default MANPATH
 #
-# derive base EC_INCLUDE_PATH from SSM_INCLUDE_PATH
-  export EC_INCLUDE_PATH="$(echo $SSM_INCLUDE_PATH | sed 's/:/ /g') "
+# derive base EC_INCLUDE_PATH from LD_LIBRARY_PATH (legacy)
+# export EC_INCLUDE_PATH="$(echo ${LD_LIBRARY_PATH}: | sed -e 's%/lib:%/include %g' -e 's/:/ /g' )"
+# derive base EC_INCLUDE_PATH from SSM_INCLUDE_PATH (current)
+  if [[ ${EC_PATH_LEGACY_MODE} == *inc* ]] ; then
+    export EC_INCLUDE_PATH="$(echo ${LD_LIBRARY_PATH}: | sed -e 's%/lib:%/include %g' -e 's/:/ /g' )"
+  else
+    export EC_INCLUDE_PATH="$(echo $SSM_INCLUDE_PATH | sed 's/:/ /g') "
+  fi
 #
-# derive base EC_LD_LIBRARY_PATH from SSM_INCLUDE_PATH (deprecated)
+#  derive base EC_LD_LIBRARY_PATH from LD_LIBRARY_PATH (legacy)
 #  export EC_LD_LIBRARY_PATH="$(echo $LD_LIBRARY_PATH | sed 's/:/ /g')"
 #  export EC_LD_LIBRARY_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include:%/lib %g' -e 's%/include/%/lib/%g' -e 's/:/ /g' ) "
 #
 # derive base EC_LD_LIBRARY_PATH from SSM_LIB_PATH (derived from SSM_INCLUDE_PATH if absent)
-  [[ -z $SSM_LIB_PATH ]] && export SSM_LIB_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include:%/lib %g' -e 's%/include/%/lib/%g')"
-  export EC_LD_LIBRARY_PATH="$(echo $SSM_LIB_PATH | sed 's/:/ /g') "
+  if [[ ${EC_PATH_LEGACY_MODE} == *lib* ]] ; then
+    export EC_LD_LIBRARY_PATH="$(echo $LD_LIBRARY_PATH | sed 's/:/ /g')"
+  else
+    if [[ -z $SSM_LIB_PATH ]] ; then
+      export SSM_LIB_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include:%/lib %g' -e 's%/include/%/lib/%g')"
+    else
+      export EC_LD_LIBRARY_PATH="$(echo $SSM_LIB_PATH | sed 's/:/ /g') "
+    fi
+  fi
 #
 # cleanup and expansion for EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH (used later by s.compile and consorts)
   COMP_ARCH=${COMP_ARCH:-${EC_ARCH#${BASE_ARCH}}}    # in case it is not defined
   COMP_ARCH=${COMP_ARCH#/}
   eval $(${FIX_THE_PATHS} ${VerboseCleanupActive} +${ORDENV_PLAT}/${COMP_ARCH}+${COMP_ARCH}+${EC_ARCH} EC_INCLUDE_PATH +${ORDENV_PLAT}/${COMP_ARCH}+${COMP_ARCH}+${EC_ARCH} EC_LD_LIBRARY_PATH)
+###  eval $(${FIX_THE_PATHS} ${VerboseCleanupActive} EC_INCLUDE_PATH EC_LD_LIBRARY_PATH)   # Hack 2 to remove by fixing r.fix_the_paths.c
 #
 unset VerboseCleanupActive

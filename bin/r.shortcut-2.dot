@@ -68,8 +68,9 @@ ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 #for Target in $(r.resolve_shortcuts${ENV_TEST_MODE} "$@" )
 ModuleMode=Add
 DelayedSsmuse=""
-DelayedMode="YES"
-which  __ssmuse 2>/dev/null >/dev/null || DelayedMode=""
+DelayedMode=""
+[[ -z $NoDelayedMode ]] && DelayedMode="YES"
+which __ssmuse 2>/dev/null >/dev/null || DelayedMode=""
 [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
 NoOrder=""
 

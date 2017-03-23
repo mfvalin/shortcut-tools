@@ -36,7 +36,8 @@ if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize internal va
   StAtUs=0
   ModuleMode=Add
   DelayedSsmuse=""
-  DelayedMode="YES"
+  DelayedMode=""
+  [[ -z $NoDelayedMode ]] && DelayedMode="YES"
   which __ssmuse 2>/dev/null >/dev/null || DelayedMode=""
   SsmuseCommand="ssmuse sh"
   which ssmuse-sh 2>/dev/null >/dev/null || SsmuseCommand="ssmuse-sh"
