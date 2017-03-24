@@ -321,6 +321,11 @@ try_next:
 }
 EOT
 #cc r.fix_the_paths.c -o r.fix_the_paths
-[[ $(which gcc) ]]  && export CC=gcc
+# [[ $(which gcc) ]]  && export CC=gcc
+if [[ "$ARCH" == AIX* ]]; then
+   export CC=cc
+else
+   export CC=gcc
+fi
 make r.fix_the_paths
 #rm -f r.fix_the_paths.c
