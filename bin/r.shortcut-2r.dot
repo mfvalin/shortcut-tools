@@ -40,7 +40,7 @@ if [[ -z $RecursionLevel ]] ; then  # top level instance, initialize internal va
   [[ -z $NoDelayedMode ]] && DelayedMode="YES"
   which __ssmuse 2>/dev/null >/dev/null || DelayedMode=""
   SsmuseCommand="ssmuse sh"
-  which ssmuse-sh 2>/dev/null >/dev/null || SsmuseCommand="ssmuse-sh"
+  which ssmuse-sh 2>/dev/null >/dev/null && SsmuseCommand="ssmuse-sh"
   [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
   NoOrder=""
 #

@@ -27,7 +27,7 @@ function is_package
 #   unset ShElL || true
 # }
 SsmuseCommand="ssmuse sh"
-which ssmuse-sh 2>/dev/null >/dev/null || SsmuseCommand="ssmuse-sh"
+which ssmuse-sh 2>/dev/null >/dev/null && SsmuseCommand="ssmuse-sh"
 function ssmuse_domain
 {
  echo subscribing to $*
