@@ -1,3 +1,4 @@
+#export EC_PATH_LEGACY_MODE=inclib
 # clean up, derive and expand some paths described by environment variables
 # derive EC_LD_LIBRARY_PATH and EC_INCLUDE_PATH
 # expand PATH, EC_LD_LIBRARY_PATH and EC_INCLUDE_PATH
@@ -23,7 +24,8 @@
 # export EC_INCLUDE_PATH="$(echo ${LD_LIBRARY_PATH}: | sed -e 's%/lib:%/include %g' -e 's/:/ /g' )"
 # derive base EC_INCLUDE_PATH from SSM_INCLUDE_PATH (current)
   if [[ ${EC_PATH_LEGACY_MODE} == *inc* ]] ; then
-    export EC_INCLUDE_PATH="$(echo ${LD_LIBRARY_PATH}: | sed -e 's%/lib:%/include %g' -e 's/:/ /g' )"
+    echo "=== EC_INCLUDE_PATH in legacy mode ==="
+    export EC_INCLUDE_PATH="$(echo ${LD_LIBRARY_PATH}: | sed -e 's%/lib/%/include/%g' -e 's%/lib:%/include:%g' -e 's/:/ /g' )"
   else
     export EC_INCLUDE_PATH="$(echo $SSM_INCLUDE_PATH | sed 's/:/ /g') "
   fi
@@ -34,12 +36,13 @@
 #
 # derive base EC_LD_LIBRARY_PATH from SSM_LIB_PATH (derived from SSM_INCLUDE_PATH if absent)
   if [[ ${EC_PATH_LEGACY_MODE} == *lib* ]] ; then
+    echo "=== EC_LD_LIBRARY_PATH in legacy mode ==="
     export EC_LD_LIBRARY_PATH="$(echo $LD_LIBRARY_PATH | sed 's/:/ /g')"
   else
     if [[ -z $SSM_LIB_PATH ]] ; then
-      export SSM_LIB_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include:%/lib %g' -e 's%/include/%/lib/%g')"
+      export EC_LD_LIBRARY_PATH="$(echo ${SSM_INCLUDE_PATH}: | sed -e 's%/include/%/lib/%g' -e 's%/include:%/lib:%g' -e 's/:/ /g') "
     else
-      export EC_LD_LIBRARY_PATH="$(echo $SSM_LIB_PATH | sed 's/:/ /g') "
+      export EC_LD_LIBRARY_PATH="$(echo ${SSM_LIB_PATH} | sed 's/:/ /g') "
     fi
   fi
 #
