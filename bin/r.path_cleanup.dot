@@ -23,9 +23,9 @@
 # derive base EC_INCLUDE_PATH from LD_LIBRARY_PATH (legacy)
 # export EC_INCLUDE_PATH="$(echo ${LD_LIBRARY_PATH}: | sed -e 's%/lib:%/include %g' -e 's/:/ /g' )"
 # derive base EC_INCLUDE_PATH from SSM_INCLUDE_PATH (current)
-  if [[ ${EC_PATH_LEGACY_MODE} == *inc* ]] ; then
+  if [[ ${EC_PATH_LEGACY_MODE} == *inc* ]] ; then  # make legacy mode universal by prefixing it with SSM_INCLUDE_PATH if present
     echo "=== EC_INCLUDE_PATH in legacy mode ==="
-    export EC_INCLUDE_PATH="$(echo ${LD_LIBRARY_PATH}: | sed -e 's%/lib/%/include/%g' -e 's%/lib:%/include:%g' -e 's/:/ /g' )"
+    export EC_INCLUDE_PATH="$(echo ${SSM_INCLUDE_PATH}:${LD_LIBRARY_PATH}: | sed -e 's%/lib/%/include/%g' -e 's%/lib:%/include:%g' -e 's/:/ /g' )"
   else
     export EC_INCLUDE_PATH="$(echo $SSM_INCLUDE_PATH | sed 's/:/ /g') "
   fi
