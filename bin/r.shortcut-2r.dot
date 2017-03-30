@@ -98,7 +98,7 @@ while true ; do
   [[ "$TargetV01" == NoOrder ]] && NoOrder="yes" && continue    # ssmuse-sh done at end
 
 # accumulated ssmuse commands performed immediately
-  [[ "$TargetV01" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue  # ssmuse-sh done NOW
+  [[ "$TargetV01" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && . ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue  # ssmuse-sh done NOW
 
 # resolver detected error
   if [[ "$TargetV01" == @* ]] ; then echo "WARNING: NO SHORTCUT FOUND FOR ${TargetV01#@}" ; continue ; fi
@@ -135,20 +135,20 @@ while true ; do
   fi
 # 
 # non ssm element, process delayed ssmuse-sh unless in NoOrder mode
-  [[ -n "${DelayedSsmuse}" ]] && [[ -z ${NoOrder} ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""
+  [[ -n "${DelayedSsmuse}" ]] && [[ -z ${NoOrder} ]] && . ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""
 # 
 # domain with cache and caching is permitted
   if [[ -f "${TargetV01}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ]] ; then
-    source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""     # must process delayed ssmuse-sh now if using domain cache to preserve package ordering
+    . ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""     # must process delayed ssmuse-sh now if using domain cache to preserve package ordering
     echo "INFO: USING cache for DOMAIN `true_path $TargetV01`"
-    source ${TargetV01}/cache.$BASE_ARCH
+    . ${TargetV01}/cache.$BASE_ARCH
     continue
   fi
 # 
 # name.sh type shortcut
   if [[ "$TargetV01" = *.sh && -r "$TargetV01" ]] ; then
     echo "INFO: USING SHORTCUT $TargetV01" ;
-    source $TargetV01 ;
+    . $TargetV01 ;
     StAtUs_T=$? ; if [[ ${StAtUs_T} != 0 ]] ; then StAtUs=${StAtUs_T} ; fi
     if [[ ${StAtUs} == "111" ]] ; then echo "ERROR: abort requested by shortcut ${TargetV01}" ; break ; fi
     if [[ ${StAtUs} == "110" ]] ; then echo "WARNING: break requested by shortcut ${TargetV01}" ; StAtUs=0 ; break ; fi
@@ -156,7 +156,7 @@ while true ; do
   fi
 # 
 # if we get to this point it must be a module (an error in module processing is considered fatal)
-  if source module.dot ${add_unload:-add} ${TargetV01} 2>&1 ; then
+  if . module.dot ${add_unload:-add} ${TargetV01} 2>&1 ; then
     echo "INFO: ${add_unload:-add} ${TargetV01}"
     continue
   else
@@ -167,10 +167,10 @@ while true ; do
   echo "WARNING: NO SHORTCUT FOUND FOR ${TargetV01}"
 done
 # apply leftover delayed elements for ssmuse-sh
-[[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse}
+[[ -n "${DelayedSsmuse}" ]] && . ssmuse-sh ${DelayedSsmuse}
 #
 # cleanup of various PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
-source r.path_cleanup.dot
+. r.path_cleanup.dot
 #
 # final cleanup, get rid of internally defined variables and functions
 unset -f ssmuse_domain ssmunuse_domain ssmuse is_package || true

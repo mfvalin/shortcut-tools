@@ -1,5 +1,5 @@
 #
-# usage : source r.load.dot "$@"
+# usage : . r.load.dot "$@"
 #
 #ENV_TEST_MODE='-alpha'
 TRUE_PATH=$(which true_path)
@@ -11,7 +11,7 @@ RSHORTCUTCFG=$(which r.shortcut-cfg)
 [[ -e $TMPDIR/bin/r.shortcut-cfg ]] || ln -sf $RSHORTCUTCFG $TMPDIR/bin/r.shortcut-cfg
 #
 if [[ -n ${USE_RECURSIVE_SHORTCUTS} || -f ${HOME}/.USE_RECURSIVE_SHORTCUTS ]] ; then    #    recursive mode
-  source r.shortcut-2r.dot 2>/dev/null
+  . r.shortcut-2r.dot 2>/dev/null
 else                                         #  non recursive mode
-  source r.shortcut-2.dot 2>/dev/null
+  . r.shortcut-2.dot 2>/dev/null
 fi
