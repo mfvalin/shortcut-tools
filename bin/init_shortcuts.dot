@@ -65,9 +65,12 @@ then
     #
     FindDottableDir()
     {
+    local Prefix
+    Prefix=""
+    [[ "$1" == --* ]] && Prefix="${1#--}" && shift
     for i in ${1:-NoTaRgEt}* }
     do
-      [[ -d $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${i}/     # directory, readable, accessible
+      [[ -d $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${Prefix}${i}/     # directory, readable, accessible
     done
     }
     #
@@ -120,10 +123,11 @@ then
           COMPREPLY=( $(compgen -f "${cur}" ) )                 # fallback, regular filename completion
         fi
       else
-        if [[ "${cur}" == ./* || "${cur}" == /* ]] ; then
+        if [[ "${cur}" == ../* || "${cur}" == ./* || "${cur}" == /* ]] ; then
           COMPREPLY=( $(compgen -W "$(FindDottableFile ${cur} )" ) ) # file name, use file completion rules
         else
           COMPREPLY=( $(compgen -W "$(FindDottableName ${cur} )" ) ) # completion for first token if a name
+          [[ -z ${COMPREPLY} ]] && COMPREPLY=( $(compgen -W "$(FindDottableDir --./ ${cur} )" ) ) 
         fi
       fi
     }
