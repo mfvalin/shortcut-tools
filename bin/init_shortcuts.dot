@@ -55,7 +55,8 @@ then
     #
     FindDottableName()
     {
-    for i in ${PATH//:/\/${1:-NoTaRgEt}* } ; do [[ -r $i ]] && [[ -f $i ]] && [[ ! -x $i ]] && echo ${i##*/} ; done
+    for i in  ${PATH//:/\/${1:-NoTaRgEt}* } ; do [[ -r $i ]] && [[ -f $i ]] && [[ ! -x $i ]] && echo ${i##*/} ; done
+    for i in  ./${1:-NoTaRgEt}* } ; do [[ -r $i ]] && [[ -f $i ]] && [[ ! -x $i ]] && echo ${i##*/} ; done
     }
     #
 #     FindExecutableName()
@@ -65,12 +66,9 @@ then
     #
     FindDottableDir()
     {
-    local Prefix
-    Prefix=""
-    [[ "$1" == --* ]] && Prefix="${1#--}" && shift
     for i in ${1:-NoTaRgEt}* }
     do
-      [[ -d $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${Prefix}${i}/     # directory, readable, accessible
+      [[ -d $i ]] && [[ -r $i ]] && [[ -x $i ]] && echo ${i}/     # directory, readable, accessible
     done
     }
     #
@@ -83,7 +81,7 @@ then
 #     done
 #     }
     #
-    FindDottableFile()
+    FindDottableItem()
     {
     for i in ${1:-NoTaRgEt}* }
     do
@@ -123,11 +121,10 @@ then
           COMPREPLY=( $(compgen -f "${cur}" ) )                 # fallback, regular filename completion
         fi
       else
-        if [[ "${cur}" == ../* || "${cur}" == ./* || "${cur}" == /* ]] ; then
-          COMPREPLY=( $(compgen -W "$(FindDottableFile ${cur} )" ) ) # file name, use file completion rules
+        if [[ "${cur}" == */* ]] ; then
+          COMPREPLY=( $(compgen -W "$(FindDottableItem ${cur} )" ) ) # file name, use file completion rules
         else
-          COMPREPLY=( $(compgen -W "$(FindDottableName ${cur} )" ) ) # completion for first token if a name
-          [[ -z ${COMPREPLY} ]] && COMPREPLY=( $(compgen -W "$(FindDottableDir --./ ${cur} )" ) ) 
+          COMPREPLY=( $(compgen -W "$(FindDottableName ${cur} ) $(FindDottableDir  ${cur} )" ) ) # completion for first token if a name
         fi
       fi
     }
@@ -144,6 +141,7 @@ then
     complete -F _r.shortcut_comp r.load
     complete -o nospace -F _DottableCompletion .
     complete -o nospace -F _DottableCompletion source
+    complete -o nospace -F _DottableCompletion s.which
 #    complete -o nospace -F _ExecutableCompletion which
     complete -c command type which
     #
