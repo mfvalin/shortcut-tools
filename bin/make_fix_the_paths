@@ -43,11 +43,12 @@ int dir_entries(const char *path)  /* number of entries in directory. -1 directo
   struct dirent *entry;
   int entries = 0;
 
+  if(strcmp(".",path) == 0) return(1) ; /* directory . is always considered non empty */
   dirp = opendir(path);
   if(dirp == NULL) return -1;
   while ( (entry = readdir(dirp)) != NULL) {
    entries++;
-   if(entries >= 3) break ;    /* in this program we only want to know if directory has at least one entry other thatn . and .. */
+   if(entries >= 3) break ;    /* in this program we only want to know if directory has at least one entry other than . and .. */
   }
   closedir(dirp);
   return(entries - 2);  /* account for . and .. */
