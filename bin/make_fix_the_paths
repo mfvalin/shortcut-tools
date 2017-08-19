@@ -43,7 +43,8 @@ int dir_entries(const char *path)  /* number of entries in directory. -1 directo
   struct dirent *entry;
   int entries = 0;
 
-  if(strcmp(".",path) == 0) return(1) ; /* directory . is always considered non empty */
+  if(path[0] != '/') return(1) ; /* a relative path is always considered non empty */
+/*  if(strcmp(".",path) == 0) return(1) ; */ /* directory . is always considered non empty */
   dirp = opendir(path);
   if(dirp == NULL) return -1;
   while ( (entry = readdir(dirp)) != NULL) {
