@@ -24,7 +24,7 @@ static  char **eliminate=NULL;
 static  int n_eliminate=0;
 static  char extra_path[1204], env_value[32768], ovbin[1024], tmpdir_bin[1024], tmpdir_ovbin[1024];
 
-print_usage(char *name)
+void print_usage(char *name)
 {
    fprintf(stderr,"USAGE: %s [-v|--verbose] -pat1 -pat2 ... -patn [+supp1a[+supp1b[+supp1c]]] item1 [+supp2] item2 ... [+suppn] itemn \n",name);
    fprintf(stderr,"       pat1..patn simple patterns to eliminate\n");
@@ -43,11 +43,13 @@ int dir_entries(const char *path)  /* number of entries in directory. -1 directo
   struct dirent *entry;
   int entries = 0;
 
+  if(path[0] != '/') return(1) ; /* a relative path is always considered non empty */
+/*  if(strcmp(".",path) == 0) return(1) ; */ /* directory . is always considered non empty */
   dirp = opendir(path);
   if(dirp == NULL) return -1;
   while ( (entry = readdir(dirp)) != NULL) {
    entries++;
-   if(entries >= 3) break ;    /* in this program we only want to know if directory has at least one entry other thatn . and .. */
+   if(entries >= 3) break ;    /* in this program we only want to know if directory has at least one entry other than . and .. */
   }
   closedir(dirp);
   return(entries - 2);  /* account for . and .. */
@@ -141,7 +143,7 @@ int is_duplicate(char *what, char **table, int nentries)  /* a non existent or e
 }
 
 #define MAXAUG 8
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   char *progname, *env_var, *supplement;
   char augment[1024];     /* compound augmentation string */
@@ -318,6 +320,7 @@ try_next:
     for(i=0;i<MAXAUG;i++) augptr[i]=NULL;
     argv++;
   }
+return 0;
 }
 EOT
 #cc r.fix_the_paths.c -o r.fix_the_paths
