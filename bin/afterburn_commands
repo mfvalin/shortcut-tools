@@ -73,7 +73,8 @@ else                           # put cached entries in override directory $TMPDI
         $CMD_rm -- $1 2>/dev/null || $CMD_echo "INFO: caching $1"    # remove old entry if any
         what=$(which -- $1 2>&1)   # get path to command
         if [[ -x "$what" ]] ; then
-          $CMD_ln -s $(readlink -e $what) $1   # use true path of command
+          $CMD_ln -s $(true_path $what) $1   # use true path of command
+#          $CMD_ln -s $(readlink -e $what) $1   # use true path of command
         else
           $CMD_echo "WARNING: command $1 not found"
         fi

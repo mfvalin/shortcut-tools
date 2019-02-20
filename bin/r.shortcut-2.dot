@@ -26,10 +26,12 @@ function is_package
 #   ${SsMuSe} ${ShElL} "$@"
 #   unset ShElL || true
 # }
+SsmuseCommand="ssmuse sh"
+which ssmuse-sh 2>/dev/null >/dev/null && SsmuseCommand="ssmuse-sh"
 function ssmuse_domain
 {
  echo subscribing to $*
- eval "`ssmuse sh -d $*`"
+ eval "`${SsmuseCommand} -d $*`"
 }
 #
 #function ssmunuse_domain  # deprecated feature
@@ -66,8 +68,9 @@ ${CMD_rm:-$(which rm)} -f $TMPDIR/resolve_messages_$$
 #for Target in $(r.resolve_shortcuts${ENV_TEST_MODE} "$@" )
 ModuleMode=Add
 DelayedSsmuse=""
-DelayedMode="YES"
-which ssmuse-sh 2>/dev/null >/dev/null || DelayedMode=""
+DelayedMode=""
+[[ -z $NoDelayedMode ]] && DelayedMode="YES"
+which __ssmuse 2>/dev/null >/dev/null || DelayedMode=""
 [[ -n ${DelayedMode} ]] && echo "INFO: using delayed mode"
 NoOrder=""
 
@@ -81,7 +84,7 @@ for Target in ${Targets} ; do
 
   [[ "$Target" == NoOrder ]] && NoOrder="yes" && continue    # ssmuse-sh done at end
 
-  [[ "$Target" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue  # ssmuse-sh done NOW
+  [[ "$Target" == FlushSsm ]] && [[ -n "${DelayedSsmuse}" ]] && . ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse="" && continue  # ssmuse-sh done NOW
 
 # resolver detected error
   if [[ "$Target" == @* ]] ; then echo ERROR: NO SHORTCUT FOUND FOR ${Target#@} ; continue ; fi
@@ -119,7 +122,7 @@ for Target in ${Targets} ; do
   fi
 
 # non ssm element, process delayed ssmuse-sh unless in NoOrder mode
-  [[ -n "${DelayedSsmuse}" ]] && [[ -z ${NoOrder} ]] && source ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""
+  [[ -n "${DelayedSsmuse}" ]] && [[ -z ${NoOrder} ]] && . ssmuse-sh ${DelayedSsmuse} && DelayedSsmuse=""
 
 # domain with cache
   if [[ -f "${Target}/cache.$BASE_ARCH" && "${ARCH_CACHE}" == yes ]] ; then
@@ -152,7 +155,7 @@ for Target in ${Targets} ; do
 done
 
 # leftover delayed ssm elements
-[[ -n "${DelayedSsmuse}" ]] && source ssmuse-sh ${DelayedSsmuse}
+[[ -n "${DelayedSsmuse}" ]] && . ssmuse-sh ${DelayedSsmuse}
 
 unset SSM_SHORTCUT || true
 # cleanup of PATHS, creation of EC_INCLUDE_PATH and EC_LD_LIBRARY_PATH
